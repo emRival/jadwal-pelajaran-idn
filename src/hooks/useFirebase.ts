@@ -8,12 +8,9 @@ import {
     deleteDoc,
     setDoc,
     getDoc,
-    getDocs,
-    writeBatch,
-    query,
-    where
+    writeBatch
 } from 'firebase/firestore';
-import { db, getDbPath, APP_ID } from '@/lib/firebase';
+import { db, getDbPath } from '@/lib/firebase';
 import {
     Schedule,
     Teacher,

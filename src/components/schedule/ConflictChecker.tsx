@@ -6,8 +6,7 @@ import {
     User,
     GraduationCap,
     Search,
-    Loader2,
-    RefreshCw
+    Loader2
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -16,13 +15,12 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { useSchedules, useTeachers, useClasses, useTimeSlots } from '@/hooks/useFirebase';
-import { findScheduleConflicts, getDayName, ScheduleConflict } from '@/lib/scheduleUtils';
+import { useSchedules, useTeachers, useTimeSlots } from '@/hooks/useFirebase';
+import { findScheduleConflicts, getDayName } from '@/lib/scheduleUtils';
 
 export function ConflictChecker() {
     const { schedules, loading: schedulesLoading } = useSchedules();
     const { teachers } = useTeachers();
-    const { classes } = useClasses();
     const { timeSlots } = useTimeSlots();
 
     const [filterType, setFilterType] = useState<'all' | 'teacher' | 'class'>('all');

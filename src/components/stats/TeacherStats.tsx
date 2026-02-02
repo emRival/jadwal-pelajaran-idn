@@ -25,13 +25,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+
 
 import { useSchedules, useTeachers, useTasks, useJpCalculationMethod, useSignatureSettings, useInfoLinks } from '@/hooks/useFirebase';
 import { calculateTeacherJP } from '@/lib/scheduleUtils';

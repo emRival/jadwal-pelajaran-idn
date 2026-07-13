@@ -1,7 +1,7 @@
 // Firebase configuration
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 
 const firebaseConfig = {
     apiKey: "AIzaSyCtMvL8jM87kvtmZafYhSju39xMFm9M_ZM",
@@ -15,7 +15,13 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Initialize Firestore with offline persistence
+export const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+    })
+});
 export const googleProvider = new GoogleAuthProvider();
 
 // App ID for database paths - preserved from original app

@@ -19,6 +19,8 @@ import { TimeSlotManager } from '@/components/admin/TimeSlotManager';
 import { Settings } from '@/components/admin/Settings';
 import { useAuth } from '@/contexts/AuthContext';
 
+import { GraduationCap, Heart, ExternalLink, Calendar, Users, AlertTriangle } from 'lucide-react';
+
 import './index.css';
 
 function AppContent() {
@@ -87,17 +89,93 @@ function AppContent() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t mt-12 bg-muted/30 print:hidden">
-        <div className="container py-8 text-center text-sm text-muted-foreground">
-          <p className="font-medium">
-            © {new Date().getFullYear()} IDN Boarding School Bogor
-          </p>
-          <p className="mt-1 opacity-70">
-            Sistem Informasi Jadwal Pelajaran & Manajemen Tugas Guru
-          </p>
-          <p className="mt-2 text-xs opacity-60">
-            Dibuat oleh <span className="font-semibold text-foreground/85">Muhammad Rival</span>
-          </p>
+      <footer className="border-t mt-16 bg-muted/20 dark:bg-slate-950/40 backdrop-blur supports-[backdrop-filter]:bg-muted/10 print:hidden transition-colors duration-300">
+        <div className="container py-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            {/* Brand Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+                  <GraduationCap className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base leading-none tracking-tight">Jadwal Pelajaran</h3>
+                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-0.5">IDN Boarding School</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-sm">
+                Sistem Informasi Jadwal Pelajaran dan Manajemen Beban Tugas Mengajar Guru secara cerdas, asinkronus, dan bebas konflik.
+              </p>
+            </div>
+
+            {/* Quick Links Section */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-foreground/80">Navigasi Utama</h4>
+              <ul className="space-y-2 text-xs text-muted-foreground">
+                <li>
+                  <a href="/" className="hover:text-primary transition-colors flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Jadwal Pelajaran
+                  </a>
+                </li>
+                {isAdmin && (
+                  <>
+                    <li>
+                      <a href="/teachers" className="hover:text-primary transition-colors flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5" />
+                        Statistik Guru
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/conflicts" className="hover:text-primary transition-colors flex items-center gap-1.5">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        Cek Konflik Jadwal
+                      </a>
+                    </li>
+                  </>
+                )}
+              </ul>
+            </div>
+
+            {/* Developer / School Info Section */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-foreground/80">Informasi & Kontak</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                IDN Boarding School Pamijahan. Kecamatan Pamijahan, Kabupaten Bogor, Jawa Barat.
+              </p>
+              <div className="flex items-center gap-3 pt-1">
+                <a 
+                  href="https://idn.sch.id" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground transition-all duration-200"
+                  title="Website IDN"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Sub-footer Divider */}
+          <div className="border-t pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+            <p className="text-center sm:text-left">
+              © {new Date().getFullYear()} IDN Boarding School Pamijahan. All rights reserved.
+            </p>
+            <div className="flex items-center gap-1 text-center sm:text-right">
+              <span>Dibuat dengan</span>
+              <Heart className="h-3.5 w-3.5 text-rose-500 fill-rose-500 animate-pulse mx-0.5" />
+              <span>oleh</span>
+              <a 
+                href="https://github.com/emRival" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="font-semibold text-foreground/85 hover:text-primary transition-colors ml-1"
+              >
+                Muhammad Rival
+              </a>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

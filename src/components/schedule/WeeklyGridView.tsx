@@ -10,13 +10,19 @@ interface WeeklyGridViewProps {
 }
 
 export function WeeklyGridView({ entityName, entityType, schedules, timeSlots }: WeeklyGridViewProps) {
+    const hasSaturday = schedules.some(s => 
+        Number(s.day) === 6 && 
+        (entityType === 'class' ? s.classes?.includes(entityName) : s.guru === entityName)
+    );
+    const totalDays = hasSaturday ? 7 : 6;
+
     return (
         <div className="overflow-x-auto">
             <table className="w-full border-collapse schedule-grid">
                 <thead>
                     <tr>
                         <th className="sticky left-0 z-10 bg-muted min-w-[100px]">Waktu</th>
-                        {DAYS_OF_WEEK_API.slice(1, 6).map((_, idx) => (
+                        {DAYS_OF_WEEK_API.slice(1, totalDays).map((_, idx) => (
                             <th key={idx}>
                                 <div className="py-1 uppercase font-bold text-white">
                                     {getDayName(idx + 1)}
@@ -33,7 +39,7 @@ export function WeeklyGridView({ entityName, entityType, schedules, timeSlots }:
                                     <td className="sticky left-0 z-10 bg-muted font-bold text-center">
                                         {slot.startTime}
                                     </td>
-                                    <td colSpan={5} className="border border-black bg-green-50 text-green-800 font-bold text-center py-2 h-12">
+                                    <td colSpan={totalDays} className="border border-black bg-green-50 text-green-800 font-bold text-center py-2 h-12">
                                         {slot.name || 'Istirahat'}
                                     </td>
                                 </tr>
@@ -48,7 +54,7 @@ export function WeeklyGridView({ entityName, entityType, schedules, timeSlots }:
                                         <span className="text-[10px] text-muted-foreground">{slot.startTime}-{slot.endTime}</span>
                                     </div>
                                 </td>
-                                {DAYS_OF_WEEK_API.slice(1, 6).map((_, dayIdx) => {
+                                {DAYS_OF_WEEK_API.slice(1, totalDays).map((_, dayIdx) => {
                                     const dayNum = dayIdx + 1;
                                     const schedule = schedules.find(s =>
                                         Number(s.day) === dayNum &&

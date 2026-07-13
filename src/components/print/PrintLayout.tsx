@@ -12,6 +12,7 @@ interface PrintLayoutProps {
     hideQr?: boolean;
     hideSignatures?: boolean;
     showQr?: boolean;
+    isMultiPage?: boolean;
 }
 
 export function PrintLayout({
@@ -22,7 +23,8 @@ export function PrintLayout({
     landscape = false,
     hideQr = false,
     hideSignatures = false,
-    showQr = true
+    showQr = true,
+    isMultiPage = false
 }: PrintLayoutProps) {
     const currentDate = new Date().toLocaleDateString('id-ID', {
         weekday: 'long',
@@ -31,25 +33,47 @@ export function PrintLayout({
         day: 'numeric',
     });
 
+    let subtitleType = "JADWAL PELAJARAN & MENGAJAR";
+    let entityName = title;
+
+    if (title.startsWith("Jadwal Pelajaran Kelas ")) {
+        subtitleType = "JADWAL PELAJARAN KELAS";
+        entityName = title.replace("Jadwal Pelajaran Kelas ", "");
+    } else if (title.startsWith("Jadwal Mengajar ")) {
+        subtitleType = "JADWAL MENGAJAR GURU";
+        entityName = title.replace("Jadwal Mengajar ", "");
+    }
+
     return (
-        <div className={`print-container ${landscape ? 'landscape' : ''} bg-white text-black p-2 md:p-4 font-sans relative`}>
+        <div className={`print-container ${landscape ? 'landscape' : ''} ${isMultiPage ? 'multipage' : ''} bg-white text-black p-2 md:p-4 font-sans relative`}>
             {/* Watermark */}
             <p
-                className="watermark-overlay pointer-events-none select-none absolute text-right"
-                style={{ bottom: 0, right: 0, fontSize: '7px', color: 'rgba(0,0,0,0.25)', fontWeight: 'bold' }}
+                className="watermark-overlay pointer-events-none select-none fixed text-right"
+                style={{ bottom: '5px', right: '5px', fontSize: '7.5px', color: 'rgba(0,0,0,0.1)', fontWeight: 'bold' }}
             >
                 Jadwal Pelajaran IDN Pamijahan by Muhammad Rival, S.Kom
             </p>
 
-            {/* Header */}
-            <div className="border-b-[2px] border-black pb-2 mb-3 print-header flex items-center justify-between">
+            {/* Kop Surat (School Letterhead) */}
+            <div className="flex items-center gap-4 border-b-4 border-double border-slate-900 pb-3 mb-4 print-header">
                 <img src={logo} alt="Logo" className="h-16 w-16 object-contain" />
-                <div className="flex-1 text-center">
-                    <h2 className="text-xl font-bold uppercase tracking-wide">{title}</h2>
-                    <h3 className="text-lg font-bold uppercase tracking-wide">IDN Boarding School Pamijahan</h3>
-                    <p className="text-[10px] text-gray-500 mt-1 font-medium">Dicetak pada: {currentDate}</p>
+                <div className="flex-1 text-center pr-16">
+                    <h1 className="text-lg font-extrabold tracking-wide text-slate-950 uppercase leading-none">IDN Boarding School Pamijahan</h1>
+                    <p className="text-[9px] text-slate-600 mt-1.5 leading-tight">
+                        Jl. KH. Abdul Hamid, Desa Gunung Sari, Kec. Pamijahan, Kabupaten Bogor, Jawa Barat.
+                    </p>
+                    <p className="text-[9px] text-slate-500 font-mono mt-0.5 leading-none">
+                        Website: idn.sch.id | Email: info@idn.sch.id
+                    </p>
                 </div>
-                <div className="w-16" /> {/* Spacer for centering */}
+            </div>
+
+            {/* Document Title Block */}
+            <div className="text-center mb-5 space-y-1">
+                <h3 className="text-[11px] font-extrabold tracking-widest text-slate-700 uppercase">{subtitleType}</h3>
+                <h2 className="text-base font-black tracking-wide text-slate-950 uppercase leading-normal max-w-xl mx-auto">{entityName}</h2>
+                <div className="w-16 h-0.5 bg-slate-950/20 mx-auto mt-1 rounded-full" />
+                <p className="text-[8px] text-slate-500 font-medium">Tahun Ajaran: {new Date().getFullYear()}/{new Date().getFullYear() + 1} | Dicetak: {currentDate}</p>
             </div>
 
             {/* Content */}
@@ -61,16 +85,16 @@ export function PrintLayout({
             <div className="break-inside-avoid">
                 {/* Signatures */}
                 {signatureSettings && !hideSignatures && (
-                    <div className="flex justify-around items-end mt-4 mb-2 pt-2">
+                    <div className="flex justify-around items-end mt-12 mb-2 pt-2 signature-section">
                         {/* Vice Head */}
                         <div className="text-center w-1/3">
-                            <p className="font-bold text-[10px] mb-10 uppercase">Wakil Kepala (Kurikulum)</p>
-                            <div className="relative h-14 mb-1 flex items-end justify-center">
+                            <p className="font-bold text-[10px] uppercase mb-2">Wakil Kepala (Kurikulum)</p>
+                            <div className="relative h-20 mb-2 flex items-center justify-center">
                                 {signatureSettings.viceUrl && (
                                     <img
                                         src={signatureSettings.viceUrl}
                                         alt="TTD"
-                                        className="max-h-14 max-w-[120px] object-contain absolute bottom-0"
+                                        className="max-h-20 max-w-[160px] object-contain absolute"
                                     />
                                 )}
                             </div>
@@ -79,13 +103,13 @@ export function PrintLayout({
 
                         {/* Head Master */}
                         <div className="text-center w-1/3">
-                            <p className="font-bold text-[10px] mb-10 uppercase">Kepala Unit</p>
-                            <div className="relative h-14 mb-1 flex items-end justify-center">
+                            <p className="font-bold text-[10px] uppercase mb-2">Kepala Unit</p>
+                            <div className="relative h-20 mb-2 flex items-center justify-center">
                                 {signatureSettings.headUrl && (
                                     <img
                                         src={signatureSettings.headUrl}
                                         alt="TTD"
-                                        className="max-h-14 max-w-[120px] object-contain absolute bottom-0"
+                                        className="max-h-20 max-w-[160px] object-contain absolute"
                                     />
                                 )}
                             </div>
@@ -96,19 +120,19 @@ export function PrintLayout({
 
                 {/* QR Codes */}
                 {!hideQr && showQr && infoLinks.length > 0 && (
-                    <div className="mt-4 pt-4 border-t-2 border-gray-200">
-                        <h4 className="font-bold mb-4 text-[10px] text-center uppercase tracking-wider">Informasi Penting (Scan QR Code)</h4>
-                        <div className="flex flex-wrap gap-6 justify-center">
+                    <div className="mt-2 pt-2 border-t border-slate-200 qr-section">
+                        <h4 className="font-bold mb-1.5 text-[8px] text-center uppercase tracking-wider text-slate-700">Informasi Penting (Scan QR Code)</h4>
+                        <div className="flex flex-wrap gap-4 justify-center">
                             {infoLinks.map(link => (
-                                <div key={link.id} className="text-center w-20">
-                                    <div className="bg-white p-1 inline-block mb-1">
+                                <div key={link.id} className="text-center w-16">
+                                    <div className="bg-white p-0.5 inline-block mb-0.5">
                                         <img
-                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(link.url)}`}
-                                            className="w-16 h-16 border border-black"
+                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(link.url)}`}
+                                            className="w-10 h-10 border border-black"
                                             alt={link.title}
                                         />
                                     </div>
-                                    <p className="text-[8px] font-semibold leading-tight">{link.title}</p>
+                                    <p className="text-[7px] font-semibold leading-tight text-slate-700">{link.title}</p>
                                 </div>
                             ))}
                         </div>

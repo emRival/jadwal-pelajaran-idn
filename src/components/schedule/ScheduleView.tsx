@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Popover,
@@ -36,7 +35,6 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
@@ -56,8 +54,9 @@ import {
 import { DAYS_OF_WEEK, DAYS_OF_WEEK_API, TimeSlot } from '@/types';
 import { WeeklyGridView } from './WeeklyGridView';
 import { PiketView } from './PiketView';
-import { LogIn, Info, ExternalLink } from 'lucide-react';
-
+import { Info, ExternalLink } from 'lucide-react';
+// @ts-ignore
+import logo from '@/assets/apple-icon-180x180.png';
 type ViewMode = 'day' | 'class' | 'teacher' | 'piket';
 
 function sortClasses(classes: string[]): string[] {
@@ -453,8 +452,16 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                                         <tbody>
                                             {tableData.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={lessonSlots.length + 1} className="text-center py-8 text-muted-foreground">
-                                                        Belum ada data jadwal
+                                                    <td colSpan={lessonSlots.length + 1} className="py-16 text-center">
+                                                        <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                                                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted/40 border text-muted-foreground/60">
+                                                                <Calendar className="h-6 w-6" />
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <p className="text-sm font-semibold text-foreground/80">Jadwal Belum Tersedia</p>
+                                                                <p className="text-xs max-w-xs mx-auto text-muted-foreground">Belum ada data pelajaran yang diinput untuk hari ini.</p>
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ) : (
@@ -508,8 +515,16 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                                         <tbody>
                                             {lessonSlots.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={classNames.length + 1} className="text-center py-8 text-muted-foreground">
-                                                        Belum ada data waktu
+                                                    <td colSpan={classNames.length + 1} className="py-16 text-center">
+                                                        <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                                                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted/40 border text-muted-foreground/60">
+                                                                <Clock className="h-6 w-6" />
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <p className="text-sm font-semibold text-foreground/80">Jam Pelajaran Belum Diatur</p>
+                                                                <p className="text-xs max-w-xs mx-auto text-muted-foreground">Belum ada pengaturan waktu atau jam pelajaran untuk hari ini.</p>
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ) : (
@@ -610,12 +625,26 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                         </CardContent>
                     </Card>
                 ) : (
-                    <Card className="no-print">
-                        <CardContent className="py-20 text-center">
-                            <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                                {viewMode === 'class' ? <GraduationCap className="h-12 w-12 opacity-20" /> : <User className="h-12 w-12 opacity-20" />}
-                                <p className="text-lg font-medium">Silakan pilih {viewMode === 'class' ? 'kelas' : 'guru'} untuk melihat jadwal mingguan</p>
-                            </div>
+                    <Card className="no-print border-dashed border-2 bg-muted/5 relative overflow-hidden">
+                        <CardContent className="py-24 text-center">
+                            {/* Decorative Glow */}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+                            
+                            <motion.div 
+                                animate={{ y: [0, -8, 0] }}
+                                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                                className="flex flex-col items-center gap-4 relative z-10"
+                            >
+                                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-background border shadow-sm text-primary/70">
+                                    {viewMode === 'class' ? <GraduationCap className="h-8 w-8" /> : <User className="h-8 w-8" />}
+                                </div>
+                                <div className="space-y-1.5 max-w-sm">
+                                    <h3 className="text-lg font-bold tracking-tight">Tampilkan Jadwal Mingguan</h3>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        Silakan pilih {viewMode === 'class' ? 'kelas' : 'guru'} dari dropdown pencarian di atas untuk memulai melihat visualisasi jadwal mingguan.
+                                    </p>
+                                </div>
+                            </motion.div>
                         </CardContent>
                     </Card>
                 )
@@ -625,32 +654,60 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
             {
                 viewMode !== 'piket' && (
                     <Card className="no-print">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Clock className="h-5 w-5" />
-                                Jadwal Waktu
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-lg font-bold tracking-tight">
+                                <Clock className="h-5 w-5 text-primary" />
+                                Jadwal Waktu Jam Pelajaran
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex flex-wrap gap-2">
-                                {dayTimeSlots.map((slot) => (
-                                    <Badge
-                                        key={slot.id}
-                                        variant={slot.type === 'break' ? 'secondary' : 'outline'}
-                                        className={
-                                            currentTimeSlot?.id === slot.id
-                                                ? 'ring-2 ring-amber-400 ring-offset-2'
-                                                : ''
-                                        }
-                                    >
-                                        {slot.type === 'break' ? (
-                                            <span className="text-green-600">{slot.name}</span>
-                                        ) : (
-                                            <span>JP {slot.jp}</span>
-                                        )}
-                                        : {slot.startTime} - {slot.endTime}
-                                    </Badge>
-                                ))}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                                {dayTimeSlots.map((slot) => {
+                                    const isCurrent = currentTimeSlot?.id === slot.id;
+                                    const isBreak = slot.type === 'break';
+                                    return (
+                                        <div
+                                            key={slot.id}
+                                            className={cn(
+                                                "relative p-3 rounded-xl border flex flex-col justify-between gap-1.5 transition-all duration-300",
+                                                isCurrent 
+                                                    ? "bg-amber-500/10 border-amber-500/30 dark:border-amber-500/40 shadow-sm shadow-amber-500/10 scale-[1.02] ring-1 ring-amber-500/20"
+                                                    : isBreak
+                                                        ? "bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/20"
+                                                        : "bg-background/40 hover:bg-background/80 border-border/80 hover:shadow-sm"
+                                            )}
+                                        >
+                                            {isCurrent && (
+                                                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                                                </span>
+                                            )}
+                                            <div className="flex items-center justify-between">
+                                                <span className={cn(
+                                                    "text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider",
+                                                    isBreak 
+                                                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                                        : "bg-muted text-muted-foreground"
+                                                )}>
+                                                    {isBreak ? "Break" : `JP ${slot.jp}`}
+                                                </span>
+                                                <Clock className={cn(
+                                                    "h-3.5 w-3.5 opacity-60",
+                                                    isCurrent ? "text-amber-500" : "text-muted-foreground"
+                                                )} />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold text-xs leading-tight truncate">
+                                                    {isBreak ? slot.name : `Jam Pelajaran ${slot.jp}`}
+                                                </span>
+                                                <span className="text-[10px] text-muted-foreground mt-0.5">
+                                                    {slot.startTime} - {slot.endTime}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </CardContent>
                     </Card>
@@ -699,30 +756,59 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                 setLoginDialogOpen(open);
                 if (!open) navigate('/');
             }}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-                            <LogIn className="h-6 w-6" />
-                            Login Admin
-                        </DialogTitle>
-                        <DialogDescription>
-                            Gunakan akun Google IDN untuk mengakses fitur manajemen jadwal.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col items-center justify-center py-6">
-                        <Button
-                            onClick={handleLogin}
-                            size="lg"
-                            className="w-full flex items-center justify-center gap-3 py-6 text-lg font-semibold rounded-xl hover:scale-[1.02] transition-transform"
-                        >
-                            <svg className="h-5 w-5 bg-white rounded-full p-0.5" viewBox="0 0 24 24">
-                                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                            </svg>
-                            Lanjutkan dengan Google
-                        </Button>
+                <DialogContent className="sm:max-w-md overflow-hidden p-0 rounded-2xl border-primary/10 shadow-[0_20px_50px_rgba(99,102,241,0.15)] bg-gradient-to-b from-background to-muted/20">
+                    <div className="relative p-6 sm:p-8 space-y-6">
+                        {/* Decorative Background Glow */}
+                        <div className="absolute -top-12 -left-12 w-32 h-32 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-12 -right-12 w-32 h-32 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+
+                        <div className="flex flex-col items-center text-center space-y-4 relative z-10">
+                            {/* Logo Wrapper */}
+                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/5 dark:bg-primary/10 shadow-inner border border-primary/10 transition-transform duration-500 hover:rotate-12">
+                                <img src={logo} alt="Logo" className="h-11 w-11 object-contain rounded-md" />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <DialogTitle className="text-xl font-bold tracking-tight">Selamat Datang</DialogTitle>
+                                <DialogDescription className="text-xs text-muted-foreground max-w-[280px] mx-auto leading-relaxed">
+                                    Masuk ke sistem kelola jadwal IDN Boarding School Pamijahan
+                                </DialogDescription>
+                            </div>
+                        </div>
+
+                        <div className="py-2 relative z-10">
+                            <Button 
+                                onClick={handleLogin} 
+                                className="w-full flex items-center justify-center gap-3 h-12 text-sm font-medium border border-primary/20 bg-background text-foreground hover:bg-muted/50 transition-all shadow-sm hover:shadow-md hover:scale-[1.01]" 
+                                size="lg"
+                            >
+                                <svg className="h-5 w-5" viewBox="0 0 24 24">
+                                    <path
+                                        fill="#EA4335"
+                                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                    />
+                                    <path
+                                        fill="#34A853"
+                                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                    />
+                                    <path
+                                        fill="#FBBC05"
+                                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                                    />
+                                    <path
+                                        fill="#4285F4"
+                                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                    />
+                                </svg>
+                                <span className="font-semibold text-foreground/80">Masuk dengan Google</span>
+                            </Button>
+                        </div>
+
+                        <div className="text-center pt-2 relative z-10 border-t border-muted/50">
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold opacity-70">
+                                Khusus Pengelola & Admin
+                            </span>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -730,109 +816,130 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
             {/* Print Views - Hidden in UI, Visible in Print */}
             {
                 printMode === 'single' && (
-                    <div id="print-single-view" className="hidden print:block absolute top-0 left-0 w-full min-h-screen bg-white z-[50]">
-                        <PrintLayout
-                            title={viewMode === 'class' ? `Jadwal Pelajaran Kelas ${selectedEntity}` : `Jadwal Mengajar ${selectedEntity}`}
-                            signatureSettings={signatureSettings}
-                            infoLinks={infoLinks}
-                            showQr={viewMode === 'class'}
-                        >
-                            <div className="border border-black">
-                                <table className="w-full text-[10px] leading-tight print-table border-collapse">
-                                    {/* ... table content identical to before ... */}
-                                    <thead>
-                                        <tr>
-                                            <th className="border border-black p-1 bg-gray-100">Jam</th>
-                                            <th className="border border-black p-1 bg-gray-100">Waktu</th>
-                                            {DAYS_OF_WEEK_API.slice(1, 6).map((day, idx) => (
-                                                <th key={day} className="border border-black p-1 bg-gray-100 uppercase">{getDayName(idx + 1)}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {timeSlots.filter(slot => slot.dayType !== 'saturday').sort((a, b) => a.order - b.order).map(slot => {
-                                            if (slot.type === 'break') {
-                                                return (
-                                                    <tr key={slot.id}>
-                                                        <td colSpan={7} className="border border-black bg-green-50 text-center font-bold py-1">{slot.name}</td>
-                                                    </tr>
-                                                )
-                                            }
-                                            return (
-                                                <tr key={slot.id}>
-                                                    <td className="border border-black text-center p-1">{slot.jp}</td>
-                                                    <td className="border border-black text-center p-1 font-mono">{slot.startTime}-{slot.endTime}</td>
-                                                    {DAYS_OF_WEEK_API.slice(1, 6).map((_, dayIdx) => {
-                                                        const dayNum = dayIdx + 1;
-                                                        const schedule = schedules.find(s =>
-                                                            Number(s.day) === dayNum &&
-                                                            Number(s.jp) === Number(slot.jp) &&
-                                                            (viewMode === 'class' ? (s.classes || []).includes(selectedEntity) : s.guru === selectedEntity)
-                                                        );
+                    <div id="print-single-view" className="hidden print:block absolute top-0 left-0 w-full bg-white z-[50]">
+                        {(() => {
+                            const hasSaturday = schedules.some(s => 
+                                Number(s.day) === 6 && 
+                                (viewMode === 'class' ? (s.classes || []).includes(selectedEntity) : s.guru === selectedEntity)
+                            );
+                            const totalDays = hasSaturday ? 7 : 6;
+                            const cols = totalDays + 1; // Days + Jam + Waktu = total columns
 
-                                                        return (
-                                                            <td key={dayNum} className="border border-black text-center p-1">
-                                                                {schedule ? (
-                                                                    <>
-                                                                        <div className="font-bold">{schedule.mapel}</div>
-                                                                        <div className="text-[10px]">{viewMode === 'class' ? schedule.guru : (schedule.classes || []).join(', ')}</div>
-                                                                    </>
-                                                                ) : '-'}
-                                                            </td>
-                                                        );
-                                                    })}
+                            return (
+                                <PrintLayout
+                                    title={viewMode === 'class' ? `Jadwal Pelajaran Kelas ${selectedEntity}` : `Jadwal Mengajar ${selectedEntity}`}
+                                    signatureSettings={signatureSettings}
+                                    infoLinks={infoLinks}
+                                    showQr={viewMode === 'class'}
+                                >
+                                    <div className="border border-slate-950 overflow-hidden rounded-md">
+                                        <table className="w-full text-[12.5px] leading-normal print-table border-collapse">
+                                            <thead>
+                                                <tr className="bg-slate-100 text-slate-900 border-b border-slate-950">
+                                                    <th className="border-r border-slate-950 p-2 font-bold w-12 text-center">Jam</th>
+                                                    <th className="border-r border-slate-950 p-2 font-bold w-20 text-center">Waktu</th>
+                                                    {DAYS_OF_WEEK_API.slice(1, totalDays).map((day, idx) => (
+                                                        <th key={day} className="border-r last:border-r-0 border-slate-950 p-2 font-bold uppercase text-center">{getDayName(idx + 1)}</th>
+                                                    ))}
                                                 </tr>
-                                            )
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {viewMode === 'teacher' && selectedEntity && (
-                                <div className="mt-4 border border-black p-2 text-[10px]">
-                                    <h3 className="font-bold border-b border-black mb-2 pb-1 uppercase">Detail Beban Mengajar & Tugas</h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <table className="w-full border-collapse">
-                                                <tbody>
-                                                    <tr>
-                                                        <td className="py-1">Beban Mengajar</td>
-                                                        <td className="py-1 text-right font-bold">{calculateTeacherJP(selectedEntity, schedules, method)} JP</td>
-                                                    </tr>
-                                                    {(() => {
-                                                        const teacher = teachers.find(t => t.name === selectedEntity);
-                                                        const teacherTasks = teacher?.tasks?.map(taskId => tasks.find(t => t.id === taskId)).filter(Boolean) || [];
-                                                        const taskJp = teacherTasks.reduce((acc, t) => acc + (t?.jp || 0), 0);
-                                                        const grandTotal = calculateTeacherJP(selectedEntity, schedules, method) + taskJp;
-
+                                            </thead>
+                                            <tbody>
+                                                {timeSlots.filter(slot => slot.dayType !== 'saturday').sort((a, b) => a.order - b.order).map(slot => {
+                                                    if (slot.type === 'break') {
                                                         return (
-                                                            <>
-                                                                {teacherTasks.map((task, i) => (
-                                                                    <tr key={i} className="text-muted-foreground">
-                                                                        <td className="py-0.5 pr-2">• {task?.name}</td>
-                                                                        <td className="py-0.5 text-right">{task?.jp} JP</td>
-                                                                    </tr>
-                                                                ))}
-                                                                <tr className="border-t border-black font-bold">
-                                                                    <td className="py-1">Total Beban Tugas</td>
-                                                                    <td className="py-1 text-right">{grandTotal} JP</td>
-                                                                </tr>
-                                                            </>
-                                                        );
-                                                    })()}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div className="text-[9px] italic text-muted-foreground flex items-end justify-end">
-                                            * 1 JP = {timeSlots.find(s => s.type === 'lesson')?.startTime && timeSlots.find(s => s.type === 'lesson')?.endTime ?
-                                                (parseInt(timeSlots.find(s => s.type === 'lesson')!.endTime.split(':')[0]) * 60 + parseInt(timeSlots.find(s => s.type === 'lesson')!.endTime.split(':')[1])) -
-                                                (parseInt(timeSlots.find(s => s.type === 'lesson')!.startTime.split(':')[0]) * 60 + parseInt(timeSlots.find(s => s.type === 'lesson')!.startTime.split(':')[1]))
-                                                : 45} Menit
-                                        </div>
+                                                            <tr key={slot.id} className="border-b border-slate-950 bg-emerald-50/50">
+                                                                <td colSpan={cols} className="text-center font-bold py-1.5 text-[11.5px] text-emerald-800 tracking-wide">{slot.name}</td>
+                                                            </tr>
+                                                        )
+                                                    }
+                                                    return (
+                                                        <tr key={slot.id} className="border-b last:border-b-0 border-slate-950">
+                                                            <td className="border-r border-slate-950 text-center p-2 font-semibold bg-slate-50/40">{slot.jp}</td>
+                                                            <td className="border-r border-slate-950 text-center p-2 font-mono text-[11px] bg-slate-50/20">{slot.startTime}-{slot.endTime}</td>
+                                                            {DAYS_OF_WEEK_API.slice(1, totalDays).map((_, dayIdx) => {
+                                                                const dayNum = dayIdx + 1;
+                                                                const schedule = schedules.find(s =>
+                                                                    Number(s.day) === dayNum &&
+                                                                    Number(s.jp) === Number(slot.jp) &&
+                                                                    (viewMode === 'class' ? (s.classes || []).includes(selectedEntity) : s.guru === selectedEntity)
+                                                                );
+
+                                                                const cellColor = schedule
+                                                                    ? getEntityColor(
+                                                                        viewMode === 'class' ? schedule.guru : schedule.mapel,
+                                                                        viewMode === 'class' ? 'teacher' : 'subject'
+                                                                    )
+                                                                    : undefined;
+
+                                                                return (
+                                                                    <td 
+                                                                        key={dayNum} 
+                                                                        className="border-r last:border-r-0 border-slate-950 text-center p-2 align-middle"
+                                                                        style={cellColor ? { backgroundColor: cellColor } : undefined}
+                                                                    >
+                                                                        {schedule ? (
+                                                                            <div className="space-y-1.5">
+                                                                                <div className="font-bold text-slate-900 leading-normal">{schedule.mapel}</div>
+                                                                                <div className="text-[12px] text-slate-700 font-semibold">{viewMode === 'class' ? schedule.guru : (schedule.classes || []).join(', ')}</div>
+                                                                            </div>
+                                                                        ) : <span className="text-slate-300">-</span>}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        </tr>
+                                                    )
+                                                })}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                </div>
-                            )}
-                        </PrintLayout>
+
+                                    {viewMode === 'teacher' && selectedEntity && (
+                                        <div className="mt-4 border border-slate-950 p-3 text-[10px] rounded-md">
+                                            <h3 className="font-bold border-b border-slate-950 mb-2 pb-1.5 uppercase tracking-wide text-slate-800">Detail Beban Mengajar & Tugas</h3>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <table className="w-full border-collapse">
+                                                        <tbody>
+                                                            <tr>
+                                                                <td className="py-1">Beban Mengajar</td>
+                                                                <td className="py-1 text-right font-bold">{calculateTeacherJP(selectedEntity, schedules, method)} JP</td>
+                                                            </tr>
+                                                            {(() => {
+                                                                const teacher = teachers.find(t => t.name === selectedEntity);
+                                                                const teacherTasks = teacher?.tasks?.map(taskId => tasks.find(t => t.id === taskId)).filter(Boolean) || [];
+                                                                const taskJp = teacherTasks.reduce((acc, t) => acc + (t?.jp || 0), 0);
+                                                                const grandTotal = calculateTeacherJP(selectedEntity, schedules, method) + taskJp;
+
+                                                                return (
+                                                                    <>
+                                                                        {teacherTasks.map((task, i) => (
+                                                                            <tr key={i} className="text-muted-foreground">
+                                                                                <td className="py-0.5 pr-2">• {task?.name}</td>
+                                                                                <td className="py-0.5 text-right">{task?.jp} JP</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                        <tr className="border-t border-slate-950 font-bold">
+                                                                            <td className="py-1">Total Beban Tugas</td>
+                                                                            <td className="py-1 text-right">{grandTotal} JP</td>
+                                                                        </tr>
+                                                                    </>
+                                                                );
+                                                            })()}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                <div className="text-[9px] italic text-muted-foreground flex items-end justify-end">
+                                                    * 1 JP = {timeSlots.find(s => s.type === 'lesson')?.startTime && timeSlots.find(s => s.type === 'lesson')?.endTime ?
+                                                        (parseInt(timeSlots.find(s => s.type === 'lesson')!.endTime.split(':')[0]) * 60 + parseInt(timeSlots.find(s => s.type === 'lesson')!.endTime.split(':')[1])) -
+                                                        (parseInt(timeSlots.find(s => s.type === 'lesson')!.startTime.split(':')[0]) * 60 + parseInt(timeSlots.find(s => s.type === 'lesson')!.startTime.split(':')[1]))
+                                                        : 45} Menit
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </PrintLayout>
+                            );
+                        })()}
                     </div>
                 )
             }

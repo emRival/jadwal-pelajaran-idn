@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Schedule, TimeSlot } from '@/types';
+import { Schedule, TimeSlot, DAYS_OF_WEEK } from '@/types';
 import { DEFAULT_TIME_SLOTS } from '@/types';
 import { PrintLayout } from './PrintLayout';
 import { SignatureSettings, InfoLink } from '@/types';
@@ -15,8 +15,6 @@ interface FullSchedulePrintProps {
 type TeacherCodeMap = Map<string, { code: string; category: string }>;
 
 function getSubjectCategory(mapel: string): 'IT' | 'Diniyah' | 'English' | 'BK' {
-    // 1. Strict Prefix Check
-    // Expected format: "CATEGORY - Subject Name"
     const parts = mapel.split('-');
     if (parts.length > 1) {
         const prefix = parts[0].trim().toUpperCase();
@@ -26,18 +24,28 @@ function getSubjectCategory(mapel: string): 'IT' | 'Diniyah' | 'English' | 'BK' 
         if (prefix === 'BK') return 'BK';
     }
 
-    // 2. Fallback Keyword Check (for legacy data without prefix)
     const lower = mapel.toLowerCase();
     if (lower.includes('english') || lower.includes('inggris')) return 'English';
     if (lower.includes('diniyah') || lower.includes('pai') || lower.includes('qur') || lower.includes('hadits') || lower.includes('fiqih') || lower.includes('akidah') || lower.includes('arab')) return 'Diniyah';
     if (lower.includes('bk') || lower.includes('konseling')) return 'BK';
 
-    // 3. Default catch-all -> IT
     return 'IT';
 }
 
+function extractGrade(className: string): number {
+    return parseInt(className.match(/^\d+/)?.[0] || '0');
+}
+
+function sortClasses(classes: string[]): string[] {
+    return [...classes].sort((a, b) => {
+        const gradeA = extractGrade(a);
+        const gradeB = extractGrade(b);
+        if (gradeA !== gradeB) return gradeA - gradeB;
+        return a.localeCompare(b);
+    });
+}
+
 function generateCodeMaps(schedules: Schedule[]) {
-    // Only 4 categories now. 'Lainnya' is gone.
     const smpTeachers = { IT: new Set<string>(), Diniyah: new Set<string>(), English: new Set<string>(), BK: new Set<string>() };
     const smkTeachers = { IT: new Set<string>(), Diniyah: new Set<string>(), English: new Set<string>(), BK: new Set<string>() };
 
@@ -45,10 +53,8 @@ function generateCodeMaps(schedules: Schedule[]) {
         if (!s.guru || !s.classes || s.classes.length === 0) return;
 
         const category = getSubjectCategory(s.mapel);
-
-        // Determine level based on first class
         const className = s.classes[0];
-        const grade = parseInt(className.match(/^\d+/)?.[0] || '0');
+        const grade = extractGrade(className);
 
         if (grade >= 7 && grade <= 9) {
             smpTeachers[category].add(s.guru);
@@ -78,10 +84,29 @@ function generateCodeMaps(schedules: Schedule[]) {
 export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS as any), signatureSettings, infoLinks = [], showQr = false }: FullSchedulePrintProps) {
     const { smpMap, smkMap } = useMemo(() => generateCodeMaps(schedules), [schedules]);
 
-    // Ensure strict typing for classes
-    const smpClasses = ['7', '8A', '8B', '9'];
-    const smkClasses = ['10 RPL', '10 DKV', '10 TKJ', '11 RPL', '11 DKV', '11 TKJ'];
-    const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+    const { smpClasses, smkClasses, activeDays } = useMemo(() => {
+        const classSet = new Set<string>();
+        const daySet = new Set<number>();
+
+        schedules.forEach(s => {
+            (s.classes || []).forEach(c => classSet.add(c));
+            if (s.day) daySet.add(Number(s.day));
+        });
+
+        const allClasses = sortClasses(Array.from(classSet));
+        const smp = allClasses.filter(c => {
+            const g = extractGrade(c);
+            return g >= 7 && g <= 9;
+        });
+        const smk = allClasses.filter(c => {
+            const g = extractGrade(c);
+            return g >= 10 && g <= 12;
+        });
+
+        const days = Array.from(daySet).sort((a, b) => a - b);
+
+        return { smpClasses: smp, smkClasses: smk, activeDays: days };
+    }, [schedules]);
 
     const renderTable = (level: 'SMP' | 'SMK', classes: string[], codeMap: TeacherCodeMap) => (
         <table className="w-full border-collapse text-[6px] table-fixed print-table">
@@ -89,15 +114,15 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
                 <tr>
                     <th rowSpan={2} className="w-[5%] border border-black bg-gray-100 p-1">Jam/Waktu</th>
                     <th rowSpan={2} className="w-[2%] border border-black bg-gray-100 p-1">Ke</th>
-                    {days.map(day => (
-                        <th key={day} colSpan={classes.length} className="border border-black bg-gray-100 p-1 font-bold uppercase">{day}</th>
+                    {activeDays.map(dayNum => (
+                        <th key={dayNum} colSpan={classes.length} className="border border-black bg-gray-100 p-1 font-bold uppercase">{DAYS_OF_WEEK[dayNum]}</th>
                     ))}
                 </tr>
                 <tr>
-                    {days.map(day => (
-                        <React.Fragment key={day + '-sub'}>
+                    {activeDays.map(dayNum => (
+                        <React.Fragment key={dayNum + '-sub'}>
                             {classes.map(cls => (
-                                <th key={day + cls} className={`border border-black p-0.5 text-center font-bold text-[6px] ${level === 'SMK' ? (cls.startsWith('10') ? 'bg-blue-50' : 'bg-green-50') : 'bg-gray-200'}`}>
+                                <th key={dayNum + cls} className={`border border-black p-0.5 text-center font-bold text-[6px] ${level === 'SMK' ? (cls.startsWith('10') ? 'bg-blue-50' : 'bg-green-50') : 'bg-gray-200'}`}>
                                     {cls}
                                 </th>
                             ))}
@@ -111,7 +136,7 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
                     if (isBreak) {
                         return (
                             <tr key={slot.id || slot.order}>
-                                <td colSpan={2 + (days.length * classes.length)} className="border border-black bg-green-50 text-green-800 font-bold text-center py-0.5 text-[7px]">
+                                <td colSpan={2 + (activeDays.length * classes.length)} className="border border-black bg-green-50 text-green-800 font-bold text-center py-0.5 text-[7px]">
                                     {slot.name || 'Istirahat'}
                                 </td>
                             </tr>
@@ -123,46 +148,41 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
                             <td className="border border-black text-center p-0.5 font-bold bg-gray-50">{slot.startTime}-{slot.endTime}</td>
                             <td className="border border-black text-center p-0.5 font-bold bg-gray-50">{slot.jp}</td>
 
-                            {days.map((_, dayIndex) => { // dayIndex 0 = Senin (Day 1 in DB)
-                                const currentDay = dayIndex + 1;
-                                return (
-                                    <React.Fragment key={currentDay}>
-                                        {classes.map(cls => {
-                                            const schedule = schedules.find(s =>
-                                                Number(s.day) === currentDay &&
-                                                Number(s.jp) === Number(slot.jp) &&
-                                                (s.classes || []).includes(cls)
-                                            );
+                            {activeDays.map(dayNum => (
+                                <React.Fragment key={dayNum}>
+                                    {classes.map(cls => {
+                                        const schedule = schedules.find(s =>
+                                            Number(s.day) === dayNum &&
+                                            Number(s.jp) === Number(slot.jp) &&
+                                            (s.classes || []).includes(cls)
+                                        );
 
-                                            let content = '-';
-                                            let cellClass = '';
+                                        let content = '-';
+                                        let cellClass = '';
 
-                                            if (schedule && schedule.guru) {
-                                                const info = codeMap.get(schedule.guru);
-                                                if (info) {
-                                                    content = info.code;
-                                                    // Color coding
-                                                    if (info.category === 'IT') cellClass = 'bg-[#d2b48c]'; // tan
-                                                    else if (info.category === 'Diniyah') cellClass = 'bg-[#90ee90]'; // lightgreen
-                                                    else if (info.category === 'English') cellClass = 'bg-[#add8e6]'; // lightblue
-                                                    else if (info.category === 'BK') cellClass = 'bg-[#ffb6c1]'; // lightpink
-                                                    else cellClass = 'bg-white'; // Lainnya/Default
-                                                } else {
-                                                    // Fallback if teacher not in map but exists in schedule (should be rare now)
-                                                    content = schedule.guru.substring(0, 3).toUpperCase();
-                                                    cellClass = 'bg-white';
-                                                }
+                                        if (schedule && schedule.guru) {
+                                            const info = codeMap.get(schedule.guru);
+                                            if (info) {
+                                                content = info.code;
+                                                if (info.category === 'IT') cellClass = 'bg-[#d2b48c]';
+                                                else if (info.category === 'Diniyah') cellClass = 'bg-[#90ee90]';
+                                                else if (info.category === 'English') cellClass = 'bg-[#add8e6]';
+                                                else if (info.category === 'BK') cellClass = 'bg-[#ffb6c1]';
+                                                else cellClass = 'bg-white';
+                                            } else {
+                                                content = schedule.guru.substring(0, 3).toUpperCase();
+                                                cellClass = 'bg-white';
                                             }
+                                        }
 
-                                            return (
-                                                <td key={`${currentDay}-${cls}`} className={`border border-black text-center p-0.5 ${cellClass}`}>
-                                                    <strong className="text-[7px]">{content}</strong>
-                                                </td>
-                                            );
-                                        })}
-                                    </React.Fragment>
-                                );
-                            })}
+                                        return (
+                                            <td key={`${dayNum}-${cls}`} className={`border border-black text-center p-0.5 ${cellClass}`}>
+                                                <strong className="text-[7px]">{content}</strong>
+                                            </td>
+                                        );
+                                    })}
+                                </React.Fragment>
+                            ))}
                         </tr>
                     );
                 })}
@@ -212,35 +232,52 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
         )
     };
 
+    const hasSmp = smpClasses.length > 0;
+    const hasSmk = smkClasses.length > 0;
+
+    if (!hasSmp && !hasSmk) {
+        return (
+            <div className="w-full text-center py-10 text-muted-foreground">
+                Tidak ada data jadwal untuk ditampilkan.
+            </div>
+        );
+    }
+
     return (
         <div className="w-full">
-            <PrintLayout
-                title="JADWAL PELAJARAN GABUNGAN - SMP"
-                signatureSettings={signatureSettings || null}
-                infoLinks={infoLinks}
-                landscape={true}
-                showQr={showQr}
-            >
-                <div className="mb-4">
-                    {renderTable('SMP', smpClasses, smpMap)}
-                    {renderLegend(smpMap)}
-                </div>
-            </PrintLayout>
+            {hasSmp && (
+                <>
+                    <PrintLayout
+                        title="JADWAL PELAJARAN GABUNGAN - SMP"
+                        signatureSettings={signatureSettings || null}
+                        infoLinks={infoLinks}
+                        landscape={true}
+                        showQr={showQr}
+                    >
+                        <div className="mb-4">
+                            {renderTable('SMP', smpClasses, smpMap)}
+                            {renderLegend(smpMap)}
+                        </div>
+                    </PrintLayout>
 
-            <div className="page-break" />
+                    {hasSmk && <div className="page-break" />}
+                </>
+            )}
 
-            <PrintLayout
-                title="JADWAL PELAJARAN GABUNGAN - SMK"
-                signatureSettings={signatureSettings || null}
-                infoLinks={infoLinks}
-                landscape={true}
-                showQr={showQr}
-            >
-                <div>
-                    {renderTable('SMK', smkClasses, smkMap)}
-                    {renderLegend(smkMap)}
-                </div>
-            </PrintLayout>
+            {hasSmk && (
+                <PrintLayout
+                    title="JADWAL PELAJARAN GABUNGAN - SMK"
+                    signatureSettings={signatureSettings || null}
+                    infoLinks={infoLinks}
+                    landscape={true}
+                    showQr={showQr}
+                >
+                    <div>
+                        {renderTable('SMK', smkClasses, smkMap)}
+                        {renderLegend(smkMap)}
+                    </div>
+                </PrintLayout>
+            )}
         </div>
     );
 }

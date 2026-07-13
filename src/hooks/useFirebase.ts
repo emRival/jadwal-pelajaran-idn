@@ -63,7 +63,16 @@ export function useSchedules() {
         await batch.commit();
     };
 
-    return { schedules, loading, addSchedule, updateSchedule, deleteSchedule, bulkDeleteSchedules };
+    const bulkAddSchedules = async (items: Omit<Schedule, 'id'>[]) => {
+        const batch = writeBatch(db);
+        items.forEach(item => {
+            const docRef = doc(collection(db, getDbPath('schedules')));
+            batch.set(docRef, item);
+        });
+        await batch.commit();
+    };
+
+    return { schedules, loading, addSchedule, updateSchedule, deleteSchedule, bulkDeleteSchedules, bulkAddSchedules };
 }
 
 // Hook for real-time teachers
@@ -156,12 +165,12 @@ export function useSubjects() {
         return unsubscribe;
     }, []);
 
-    const addSubject = async (name: string) => {
-        await addDoc(collection(db, getDbPath('mapel')), { name });
+    const addSubject = async (name: string, guru?: string) => {
+        await addDoc(collection(db, getDbPath('mapel')), { name, guru: guru || '' });
     };
 
-    const updateSubject = async (id: string, name: string) => {
-        await updateDoc(doc(db, getDbPath('mapel'), id), { name });
+    const updateSubject = async (id: string, data: Partial<Subject>) => {
+        await updateDoc(doc(db, getDbPath('mapel'), id), data);
     };
 
     const deleteSubject = async (id: string) => {

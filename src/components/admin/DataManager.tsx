@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
     Plus,
@@ -9,7 +9,10 @@ import {
     BookOpen,
     ClipboardList,
     Loader2,
-    Save
+    Save,
+    Search,
+    Check,
+    ChevronsUpDown
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -38,6 +41,12 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 import { useTeachers, useClasses, useSubjects, useTasks } from '@/hooks/useFirebase';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -47,7 +56,7 @@ type EntityType = 'teachers' | 'classes' | 'subjects' | 'tasks';
 export function DataManager() {
     const { teachers, loading: teachersLoading, addTeacher, updateTeacher, deleteTeacher } = useTeachers();
     const { classes, loading: classesLoading, addClass, deleteClass } = useClasses();
-    const { subjects, loading: subjectsLoading, addSubject, deleteSubject } = useSubjects();
+    const { subjects, loading: subjectsLoading, addSubject, updateSubject, deleteSubject } = useSubjects();
     const { tasks, loading: tasksLoading, addTask, deleteTask } = useTasks();
 
     const [activeTab, setActiveTab] = useState<EntityType>('teachers');
@@ -55,9 +64,17 @@ export function DataManager() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [newName, setNewName] = useState('');
     const [newJp, setNewJp] = useState(1);
+    const [newGuru, setNewGuru] = useState('');
     const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+    const [guruDialogOpen, setGuruDialogOpen] = useState(false);
+    const [guruDialogSearch, setGuruDialogSearch] = useState('');
 
     const loading = teachersLoading || classesLoading || subjectsLoading || tasksLoading;
+
+    const filteredGuru = useMemo(() => {
+        if (!guruDialogSearch) return teachers;
+        return teachers.filter(t => t.name.toLowerCase().includes(guruDialogSearch.toLowerCase()));
+    }, [teachers, guruDialogSearch]);
 
     const getTabConfig = () => {
         switch (activeTab) {
@@ -83,7 +100,7 @@ export function DataManager() {
                 return {
                     title: 'Mata Pelajaran',
                     icon: BookOpen,
-                    items: subjects.map(s => ({ id: s.id, name: s.name })),
+                    items: subjects.map(s => ({ id: s.id, name: s.name, guru: s.guru })),
                     addFn: (name: string) => addSubject(name),
                     deleteFn: deleteSubject,
                     placeholder: 'Nama mata pelajaran'
@@ -114,11 +131,18 @@ export function DataManager() {
             } else {
                 await addTeacher(newName.trim(), selectedTasks);
             }
+        } else if (activeTab === 'subjects') {
+            if (editingId) {
+                await updateSubject(editingId, {
+                    name: newName.trim(),
+                    guru: newGuru
+                });
+            } else {
+                await addSubject(newName.trim(), newGuru);
+            }
         } else if (activeTab === 'tasks') {
-            // Task add logic (tasks doesn't support edit name yet in this simple view)
             await addTask(newName.trim(), newJp);
         } else {
-            // Other entities
             await config.addFn(newName.trim());
         }
 
@@ -128,14 +152,18 @@ export function DataManager() {
     const handleCloseDialog = () => {
         setNewName('');
         setNewJp(1);
+        setNewGuru('');
         setEditingId(null);
         setSelectedTasks([]);
+        setGuruDialogOpen(false);
+        setGuruDialogSearch('');
         setIsDialogOpen(false);
     };
 
     const openAddDialog = () => {
         setEditingId(null);
         setNewName('');
+        setNewGuru('');
         setSelectedTasks([]);
         setNewJp(1);
         setIsDialogOpen(true);
@@ -146,6 +174,11 @@ export function DataManager() {
             setEditingId(item.id);
             setNewName(item.name);
             setSelectedTasks(item.tasks || []);
+            setIsDialogOpen(true);
+        } else if (activeTab === 'subjects') {
+            setEditingId(item.id);
+            setNewName(item.name);
+            setNewGuru(item.guru || '');
             setIsDialogOpen(true);
         }
     };
@@ -253,6 +286,68 @@ export function DataManager() {
                                             </div>
                                         )}
 
+                                        {activeTab === 'subjects' && (
+                                            <div className="space-y-2">
+                                                <Label>Guru</Label>
+                                                <Popover open={guruDialogOpen} onOpenChange={setGuruDialogOpen}>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            className="w-full justify-between font-normal"
+                                                        >
+                                                            {newGuru ? newGuru : "Pilih guru..."}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-[400px] p-0" align="start">
+                                                        <div className="flex items-center border-b px-3">
+                                                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                                            <input
+                                                                className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                                                placeholder="Cari guru..."
+                                                                value={guruDialogSearch}
+                                                                onChange={(e) => setGuruDialogSearch(e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div className="max-h-[200px] overflow-y-auto p-1">
+                                                            {filteredGuru.length === 0 ? (
+                                                                <div className="py-6 text-center text-sm text-muted-foreground">
+                                                                    Tidak ditemukan.
+                                                                </div>
+                                                            ) : (
+                                                                filteredGuru.map((teacher) => (
+                                                                    <div
+                                                                        key={teacher.id}
+                                                                        className={cn(
+                                                                            "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+                                                                            newGuru === teacher.name ? "bg-accent text-accent-foreground" : ""
+                                                                        )}
+                                                                        onClick={() => {
+                                                                            setNewGuru(teacher.name);
+                                                                            setGuruDialogOpen(false);
+                                                                            setGuruDialogSearch('');
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                newGuru === teacher.name ? "opacity-100" : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {teacher.name}
+                                                                    </div>
+                                                                ))
+                                                            )}
+                                                        </div>
+                                                    </PopoverContent>
+                                                </Popover>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Guru akan otomatis terisi saat memilih mapel di jadwal
+                                                </p>
+                                            </div>
+                                        )}
+
                                         {activeTab === 'tasks' && (
                                             <div className="space-y-2">
                                                 <Label>Jumlah JP</Label>
@@ -299,9 +394,12 @@ export function DataManager() {
                                                     {'jp' in item && (
                                                         <Badge variant="secondary">{(item as any).jp} JP</Badge>
                                                     )}
+                                                    {'guru' in item && (item as any).guru && (
+                                                        <Badge variant="outline">{(item as any).guru}</Badge>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-1">
-                                                    {activeTab === 'teachers' && (
+                                                    {(activeTab === 'teachers' || activeTab === 'subjects') && (
                                                         <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
                                                             <Edit className="h-4 w-4 text-blue-500" />
                                                         </Button>

@@ -100,7 +100,7 @@ export function TeacherStats() {
             if (sortBy === 'name') {
                 comparison = a.name.localeCompare(b.name);
             } else {
-                comparison = a.grandTotal - b.grandTotal;
+                comparison = a.totalJp - b.totalJp;
             }
             return sortOrder === 'asc' ? comparison : -comparison;
         });
@@ -147,7 +147,7 @@ export function TeacherStats() {
                     </div>
 
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <Card>
                             <CardContent className="pt-6">
                                 <div className="flex items-center gap-4">
@@ -184,6 +184,23 @@ export function TeacherStats() {
                                     </div>
                                     <div>
                                         <p className="text-sm text-muted-foreground">Rata-rata JP/Guru</p>
+                                        <p className="text-2xl font-bold">
+                                            {teachers.length > 0
+                                                ? (teacherStats.reduce((acc, t) => acc + t.totalJp, 0) / teachers.length).toFixed(1)
+                                                : 0}
+                                        </p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardContent className="pt-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 rounded-lg bg-purple-100">
+                                        <BarChart3 className="h-6 w-6 text-purple-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">Rata-rata Grand Total</p>
                                         <p className="text-2xl font-bold">
                                             {teachers.length > 0
                                                 ? (teacherStats.reduce((acc, t) => acc + t.grandTotal, 0) / teachers.length).toFixed(1)

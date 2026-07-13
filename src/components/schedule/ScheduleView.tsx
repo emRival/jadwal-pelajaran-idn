@@ -84,9 +84,33 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
 
     const handlePrint = (mode: 'single' | 'combined') => {
         setPrintMode(mode);
-        setTimeout(() => {
-            window.print();
-        }, 500);
+
+        const qrUrls = infoLinks.map(link =>
+            `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(link.url)}`
+        );
+
+        if (qrUrls.length === 0) {
+            setTimeout(() => window.print(), 300);
+            return;
+        }
+
+        let loaded = 0;
+        const total = qrUrls.length;
+        const onDone = () => {
+            loaded++;
+            if (loaded >= total) {
+                setTimeout(() => window.print(), 200);
+            }
+        };
+
+        qrUrls.forEach(url => {
+            const img = new Image();
+            img.onload = onDone;
+            img.onerror = onDone;
+            img.src = url;
+        });
+
+        setTimeout(() => window.print(), 5000);
     };
 
     const [viewMode, setViewMode] = useState<ViewMode>('day');
@@ -670,7 +694,7 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
 
             {
                 printMode === 'combined' && (
-                    <div id="print-combined-view" className="hidden print:block absolute top-0 left-0 w-full min-h-screen bg-white z-[50]">
+                    <div id="print-combined-view" className="hidden print:block bg-white z-[50]">
                         <FullSchedulePrint
                             schedules={schedules}
                             timeSlots={timeSlots}

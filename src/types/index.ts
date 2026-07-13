@@ -23,6 +23,7 @@ export interface Class {
 export interface Subject {
     id: string;
     name: string;
+    guru?: string;
 }
 
 export interface Task {

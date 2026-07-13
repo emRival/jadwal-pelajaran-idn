@@ -28,7 +28,7 @@ export function Settings() {
     const { settings: signatureSettings, updateSettings: updateSignature, loading: sigLoading } = useSignatureSettings();
     const { method: jpMethod, updateMethod: updateJpMethod, loading: jpLoading } = useJpCalculationMethod();
     const { apiUrl: piketUrl, updateApiUrl: updatePiketUrl, loading: piketLoading } = usePiketApi();
-    const { infoLinks, addInfoLink, deleteInfoLink, loading: linksLoading } = useInfoLinks();
+    const { infoLinks, addInfoLink, updateInfoLink, deleteInfoLink, loading: linksLoading } = useInfoLinks();
 
     const [headName, setHeadName] = useState('');
     const [headUrl, setHeadUrl] = useState('');
@@ -226,19 +226,28 @@ export function Settings() {
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: index * 0.05 }}
-                                        className="flex items-center justify-between p-3 bg-muted rounded-md"
+                                        className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-muted rounded-md"
                                     >
-                                        <div>
-                                            <span className="font-medium">{link.title}</span>
-                                            <a
-                                                href={link.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-sm text-primary hover:underline ml-2"
-                                            >
-                                                {link.url.substring(0, 40)}...
-                                            </a>
-                                        </div>
+                                        <Input
+                                            placeholder="Judul"
+                                            defaultValue={link.title}
+                                            onBlur={(e) => {
+                                                if (e.target.value !== link.title) {
+                                                    updateInfoLink(link.id, { title: e.target.value });
+                                                }
+                                            }}
+                                            className="font-medium flex-1 min-w-0"
+                                        />
+                                        <Input
+                                            placeholder="URL"
+                                            defaultValue={link.url}
+                                            onBlur={(e) => {
+                                                if (e.target.value !== link.url) {
+                                                    updateInfoLink(link.id, { url: e.target.value });
+                                                }
+                                            }}
+                                            className="text-sm flex-[2] min-w-0"
+                                        />
                                         <Button
                                             variant="ghost"
                                             size="sm"

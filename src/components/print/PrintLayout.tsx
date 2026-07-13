@@ -32,7 +32,15 @@ export function PrintLayout({
     });
 
     return (
-        <div className={`print-container ${landscape ? 'landscape' : ''} bg-white text-black p-2 md:p-4 font-sans`}>
+        <div className={`print-container ${landscape ? 'landscape' : ''} bg-white text-black p-2 md:p-4 font-sans relative`}>
+            {/* Watermark */}
+            <p
+                className="watermark-overlay pointer-events-none select-none absolute text-right"
+                style={{ bottom: 0, right: 0, fontSize: '7px', color: 'rgba(0,0,0,0.25)', fontWeight: 'bold' }}
+            >
+                Jadwal Pelajaran IDN Pamijahan by Muhammad Rival, S.Kom
+            </p>
+
             {/* Header */}
             <div className="border-b-[2px] border-black pb-2 mb-3 print-header flex items-center justify-between">
                 <img src={logo} alt="Logo" className="h-16 w-16 object-contain" />

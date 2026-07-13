@@ -6,7 +6,9 @@ import {
     User,
     GraduationCap,
     Search,
-    Loader2
+    Loader2,
+    X,
+    Plus
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -18,6 +20,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSchedules, useTeachers, useTimeSlots } from '@/hooks/useFirebase';
 import { findScheduleConflicts, getDayName } from '@/lib/scheduleUtils';
 
+const MAX_COMPARE_TEACHERS = 3;
+
 export function ConflictChecker() {
     const { schedules, loading: schedulesLoading } = useSchedules();
     const { teachers } = useTeachers();
@@ -25,8 +29,9 @@ export function ConflictChecker() {
 
     const [filterType, setFilterType] = useState<'all' | 'teacher' | 'class'>('all');
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedTeacherA, setSelectedTeacherA] = useState('');
-    const [selectedTeacherB, setSelectedTeacherB] = useState('');
+    const [selectedTeachers, setSelectedTeachers] = useState<string[]>([]);
+    const [teacherSearch, setTeacherSearch] = useState('');
+    const [teacherDropdownOpen, setTeacherDropdownOpen] = useState(false);
 
     const loading = schedulesLoading;
 
@@ -58,22 +63,46 @@ export function ConflictChecker() {
 
     // Teacher comparison
     const teacherComparison = useMemo(() => {
-        if (!selectedTeacherA || !selectedTeacherB) return null;
+        if (selectedTeachers.length < 2) return null;
 
-        const schedulesA = schedules.filter(s => s.guru === selectedTeacherA);
-        const schedulesB = schedules.filter(s => s.guru === selectedTeacherB);
+        const teacherSchedules = selectedTeachers.map(name => ({
+            name,
+            schedules: schedules.filter(s => s.guru === name)
+        }));
 
-        // Find overlapping time slots
-        const overlaps = schedulesA.filter(a =>
-            schedulesB.some(b => b.day === a.day && b.jp === a.jp)
-        );
+        // Find overlaps: any time slot where 2+ selected teachers are assigned
+        const overlaps: { day: number; jp: number; teachers: string[]; schedule: typeof schedules[0] }[] = [];
+
+        const dayJpMap = new Map<string, { day: number; jp: number; teachers: string[]; schedule: typeof schedules[0] }>();
+        for (const ts of teacherSchedules) {
+            for (const s of ts.schedules) {
+                const key = `${s.day}-${s.jp}`;
+                if (dayJpMap.has(key)) {
+                    const existing = dayJpMap.get(key)!;
+                    if (!existing.teachers.includes(ts.name)) {
+                        existing.teachers.push(ts.name);
+                    }
+                } else {
+                    dayJpMap.set(key, { day: s.day, jp: s.jp, teachers: [ts.name], schedule: s });
+                }
+            }
+        }
+        dayJpMap.forEach(entry => {
+            if (entry.teachers.length >= 2) {
+                overlaps.push(entry);
+            }
+        });
 
         return {
-            teacherA: { name: selectedTeacherA, schedules: schedulesA },
-            teacherB: { name: selectedTeacherB, schedules: schedulesB },
+            teacherSchedules,
             overlaps
         };
-    }, [selectedTeacherA, selectedTeacherB, schedules]);
+    }, [selectedTeachers, schedules]);
+
+    const filteredTeachers = useMemo(() => {
+        if (!teacherSearch) return teachers;
+        return teachers.filter(t => t.name.toLowerCase().includes(teacherSearch.toLowerCase()));
+    }, [teachers, teacherSearch]);
 
     const getSlotLabel = (jp: number) => {
         const slot = timeSlots.find(s => s.jp === jp);
@@ -259,45 +288,79 @@ export function ConflictChecker() {
                 <TabsContent value="compare">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Bandingkan Jadwal Dua Guru</CardTitle>
+                            <CardTitle>Bandingkan Jadwal Guru</CardTitle>
                             <CardDescription>
-                                Pilih dua guru untuk melihat jadwal yang tumpang tindih
+                                Pilih 2-{MAX_COMPARE_TEACHERS} guru untuk melihat jadwal yang tumpang tindih
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                <div>
-                                    <label className="text-sm font-medium mb-2 block">Guru 1</label>
-                                    <select
-                                        className="w-full p-2 border rounded-md"
-                                        value={selectedTeacherA}
-                                        onChange={(e) => setSelectedTeacherA(e.target.value)}
-                                    >
-                                        <option value="">Pilih guru...</option>
-                                        {teachers.map(t => (
-                                            <option key={t.id} value={t.name}>{t.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium mb-2 block">Guru 2</label>
-                                    <select
-                                        className="w-full p-2 border rounded-md"
-                                        value={selectedTeacherB}
-                                        onChange={(e) => setSelectedTeacherB(e.target.value)}
-                                    >
-                                        <option value="">Pilih guru...</option>
-                                        {teachers.filter(t => t.name !== selectedTeacherA).map(t => (
-                                            <option key={t.id} value={t.name}>{t.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                            {/* Selected teachers */}
+                            <div className="flex flex-wrap gap-2 mb-4">
+                                {selectedTeachers.map(name => (
+                                    <Badge key={name} variant="secondary" className="flex items-center gap-1 px-3 py-1.5 text-sm">
+                                        {name}
+                                        <button
+                                            onClick={() => setSelectedTeachers(prev => prev.filter(t => t !== name))}
+                                            className="ml-1 hover:text-destructive"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </Badge>
+                                ))}
                             </div>
 
-                            {teacherComparison && (
+                            {/* Add teacher dropdown */}
+                            {selectedTeachers.length < MAX_COMPARE_TEACHERS && (
+                                <div className="relative mb-6">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Cari guru untuk ditambahkan..."
+                                        value={teacherSearch}
+                                        onChange={(e) => {
+                                            setTeacherSearch(e.target.value);
+                                            setTeacherDropdownOpen(true);
+                                        }}
+                                        onFocus={() => setTeacherDropdownOpen(true)}
+                                        onBlur={() => setTimeout(() => setTeacherDropdownOpen(false), 200)}
+                                        className="pl-10"
+                                    />
+                                    {teacherDropdownOpen && filteredTeachers.length > 0 && (
+                                        <div className="absolute z-10 top-full mt-1 w-full bg-popover border rounded-md shadow-md max-h-[200px] overflow-y-auto">
+                                            {filteredTeachers
+                                                .filter(t => !selectedTeachers.includes(t.name))
+                                                .map(t => (
+                                                    <button
+                                                        key={t.id}
+                                                        className="w-full px-3 py-2 text-sm text-left hover:bg-accent hover:text-accent-foreground flex items-center gap-2"
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault();
+                                                            setSelectedTeachers(prev => [...prev, t.name]);
+                                                            setTeacherSearch('');
+                                                            setTeacherDropdownOpen(false);
+                                                        }}
+                                                    >
+                                                        <Plus className="h-3 w-3 text-muted-foreground" />
+                                                        {t.name}
+                                                    </button>
+                                                ))}
+                                            {filteredTeachers.filter(t => !selectedTeachers.includes(t.name)).length === 0 && (
+                                                <div className="px-3 py-2 text-sm text-muted-foreground">
+                                                    Tidak ada guru yang cocok
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {selectedTeachers.length < 2 ? (
+                                <p className="text-sm text-muted-foreground text-center py-8">
+                                    Pilih minimal 2 guru untuk memulai perbandingan
+                                </p>
+                            ) : teacherComparison && (
                                 <div className="space-y-4">
-                                    <div className={`p-4 rounded-lg ${teacherComparison.overlaps.length === 0 ? 'bg-green-50' : 'bg-red-50'
-                                        }`}>
+                                    {/* Schedule grids side by side */}
+                                    <div className={`p-4 rounded-lg ${teacherComparison.overlaps.length === 0 ? 'bg-green-50' : 'bg-red-50'}`}>
                                         <div className="flex items-center gap-2">
                                             {teacherComparison.overlaps.length === 0 ? (
                                                 <>
@@ -317,16 +380,45 @@ export function ConflictChecker() {
                                         </div>
                                     </div>
 
+                                    {/* Individual teacher schedules */}
+                                    <div className={`grid gap-4 grid-cols-1 ${teacherComparison.teacherSchedules.length === 2 ? 'md:grid-cols-2' : teacherComparison.teacherSchedules.length === 3 ? 'md:grid-cols-3' : ''}`}>
+                                        {teacherComparison.teacherSchedules.map(ts => (
+                                            <div key={ts.name} className="border rounded-md p-3">
+                                                <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                                                    <User className="h-4 w-4" />
+                                                    {ts.name}
+                                                    <Badge variant="outline" className="ml-auto text-xs">{ts.schedules.length} jadwal</Badge>
+                                                </h4>
+                                                <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                                                    {ts.schedules.length === 0 ? (
+                                                        <p className="text-xs text-muted-foreground">Tidak ada jadwal</p>
+                                                    ) : (
+                                                        ts.schedules.sort((a, b) => a.day - b.day || a.jp - b.jp).map(s => {
+                                                            const isOverlap = teacherComparison.overlaps.some(o => o.day === s.day && o.jp === s.jp);
+                                                            return (
+                                                                <div key={s.id} className={`text-xs p-1.5 rounded ${isOverlap ? 'bg-red-100 border border-red-300' : 'bg-muted'}`}>
+                                                                    {getDayName(s.day)}, {getSlotLabel(s.jp)}
+                                                                    <span className="text-muted-foreground ml-1">— {s.mapel}</span>
+                                                                </div>
+                                                            );
+                                                        })
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Overlap details */}
                                     {teacherComparison.overlaps.length > 0 && (
                                         <div className="space-y-2">
                                             <h4 className="font-medium">Detail Tumpang Tindih:</h4>
-                                            {teacherComparison.overlaps.map(schedule => (
-                                                <div key={schedule.id} className="p-3 bg-muted rounded-md">
+                                            {teacherComparison.overlaps.map((overlap, i) => (
+                                                <div key={i} className="p-3 bg-red-50 border border-red-200 rounded-md">
                                                     <div className="font-medium">
-                                                        {getDayName(schedule.day)}, {getSlotLabel(schedule.jp)}
+                                                        {getDayName(overlap.day)}, {getSlotLabel(overlap.jp)}
                                                     </div>
                                                     <div className="text-sm text-muted-foreground">
-                                                        {schedule.mapel} — {schedule.classes?.join(', ')}
+                                                        {overlap.teachers.join(' & ')}
                                                     </div>
                                                 </div>
                                             ))}

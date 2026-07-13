@@ -158,6 +158,11 @@
   @apply max-w-7xl mx-auto px-4;
 }
 
+/* Watermark - hidden on screen, visible in print */
+.watermark-overlay {
+  display: none !important;
+}
+
 /* Print styles */
 @media print {
   body {
@@ -176,6 +181,10 @@
   }
 
   .print-only {
+    display: block !important;
+  }
+
+  .watermark-overlay {
     display: block !important;
   }
 }

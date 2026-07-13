@@ -95,49 +95,49 @@
 
 .schedule-grid th,
 .schedule-grid td {
-  @apply border-2 border-slate-300 p-3 text-center min-w-[100px] transition-colors;
+  @apply border-2 border-slate-300 dark:border-slate-800 p-3 text-center min-w-[100px] transition-colors;
 }
 
 .schedule-grid th {
-  @apply bg-slate-700 text-white font-bold text-sm;
+  @apply bg-slate-700 dark:bg-slate-900 text-white font-bold text-sm;
 }
 
 .schedule-grid tbody tr:nth-child(odd) {
-  @apply bg-white;
+  @apply bg-white dark:bg-slate-950;
 }
 
 .schedule-grid tbody tr:nth-child(even) {
-  @apply bg-slate-50;
+  @apply bg-slate-50 dark:bg-slate-900/40;
 }
 
 .schedule-grid tbody tr:hover {
-  @apply bg-blue-50;
+  @apply bg-blue-50 dark:bg-blue-950/20;
 }
 
 .schedule-grid td:first-child {
-  @apply bg-slate-100 font-bold text-slate-800 sticky left-0 z-10 border-r-4 border-slate-400;
+  @apply bg-slate-100 dark:bg-slate-900 font-bold text-slate-800 dark:text-slate-200 sticky left-0 z-10 border-r-4 border-slate-400 dark:border-slate-700;
 }
 
 .schedule-grid tbody td {
-  @apply text-slate-700;
+  @apply text-slate-700 dark:text-slate-300;
 }
 
 /* Empty cell styling */
 .schedule-grid td:not(:first-child):empty::before,
 .schedule-grid td .empty-cell {
-  @apply text-slate-400;
+  @apply text-slate-400 dark:text-slate-600;
 }
 
 .schedule-break-row {
-  @apply bg-green-100 text-green-800 font-bold text-center border-y-4 border-green-400;
+  @apply bg-green-100 dark:bg-green-950/20 text-green-800 dark:text-green-300 font-bold text-center border-y-4 border-green-400 dark:border-green-800;
 }
 
 .current-timeslot {
-  @apply bg-amber-100 border-2 border-amber-400;
+  @apply bg-amber-100 dark:bg-amber-950/20 border-2 border-amber-400 dark:border-amber-700;
 }
 
 .current-timeslot-header {
-  @apply bg-amber-500 text-white border-l-4 border-amber-700;
+  @apply bg-amber-500 dark:bg-amber-600 text-white border-l-4 border-amber-700 dark:border-amber-800;
 }
 
 /* Schedule cell content */
@@ -166,9 +166,45 @@
 /* Print styles */
 @media print {
   body {
-    background-color: white;
+    background-color: white !important;
+    color: black !important;
     -webkit-print-color-adjust: exact;
     color-adjust: exact;
+  }
+
+  .dark {
+    --background: 0 0% 100% !important;
+    --foreground: 0 0% 3.9% !important;
+    --card: 0 0% 100% !important;
+    --card-foreground: 0 0% 3.9% !important;
+    --border: 0 0% 89.8% !important;
+    --muted: 0 0% 96.1% !important;
+    --muted-foreground: 0 0% 45.1% !important;
+  }
+
+  .schedule-grid th,
+  .schedule-grid td {
+    border-color: #cbd5e1 !important;
+    color: #334155 !important;
+  }
+
+  .schedule-grid th {
+    background-color: #334155 !important;
+    color: #ffffff !important;
+  }
+
+  .schedule-grid td:first-child {
+    background-color: #f1f5f9 !important;
+    color: #1e293b !important;
+    border-right-color: #94a3b8 !important;
+  }
+
+  .schedule-grid tbody tr:nth-child(odd) {
+    background-color: #ffffff !important;
+  }
+
+  .schedule-grid tbody tr:nth-child(even) {
+    background-color: #f8fafc !important;
   }
 
   @page {

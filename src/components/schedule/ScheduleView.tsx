@@ -11,7 +11,9 @@ import {
     Printer,
     ClipboardList,
     Check,
-    ChevronsUpDown
+    ChevronsUpDown,
+    Columns,
+    Rows
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,6 +60,12 @@ import { LogIn, Info, ExternalLink } from 'lucide-react';
 
 type ViewMode = 'day' | 'class' | 'teacher' | 'piket';
 
+function sortClasses(classes: string[]): string[] {
+    return [...classes].sort((a, b) => {
+        return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    });
+}
+
 interface ScheduleViewProps {
     loginOpenDefault?: boolean;
 }
@@ -88,11 +96,22 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
         }
 
         let loaded = 0;
+        let printed = false;
         const total = qrUrls.length;
+        let fallbackTimeoutId: NodeJS.Timeout;
+
+        const triggerPrint = () => {
+            if (!printed) {
+                printed = true;
+                if (fallbackTimeoutId) clearTimeout(fallbackTimeoutId);
+                window.print();
+            }
+        };
+
         const onDone = () => {
             loaded++;
             if (loaded >= total) {
-                setTimeout(() => window.print(), 200);
+                setTimeout(triggerPrint, 200);
             }
         };
 
@@ -103,11 +122,12 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
             img.src = url;
         });
 
-        setTimeout(() => window.print(), 5000);
+        fallbackTimeoutId = setTimeout(triggerPrint, 5000);
     };
 
     const [viewMode, setViewMode] = useState<ViewMode>('day');
     const [selectedDay, setSelectedDay] = useState(getCurrentDay());
+    const [dayLayout, setDayLayout] = useState<'horizontal' | 'vertical'>('horizontal');
     const [selectedEntity, setSelectedEntity] = useState<string>('');
     const [searchQuery, setSearchQuery] = useState('');
     const [currentTimeSlot, setCurrentTimeSlot] = useState<TimeSlot | null>(null);
@@ -129,17 +149,26 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
 
     const loading = schedulesLoading || teachersLoading || classesLoading || timeSlotsLoading;
 
+    // Filter time slots based on the selected day (saturday vs weekday)
+    const dayTimeSlots = useMemo(() => {
+        if (selectedDay === 6) {
+            return timeSlots.filter(slot => slot.dayType === 'saturday');
+        }
+        return timeSlots.filter(slot => slot.dayType !== 'saturday');
+    }, [timeSlots, selectedDay]);
+
     // Update current time slot every minute
     useEffect(() => {
         const updateCurrentSlot = () => {
-            setCurrentTimeSlot(getCurrentTimeSlot(timeSlots));
+            setCurrentTimeSlot(getCurrentTimeSlot(dayTimeSlots));
         };
         updateCurrentSlot();
         const interval = setInterval(updateCurrentSlot, 60000);
         return () => clearInterval(interval);
-    }, [timeSlots]);
+    }, [dayTimeSlots]);
 
-    const lessonSlots = useMemo(() => getLessonTimeSlots(timeSlots), [timeSlots]);
+    const lessonSlots = useMemo(() => getLessonTimeSlots(dayTimeSlots), [dayTimeSlots]);
+    const classNames = useMemo(() => sortClasses(classes.map(c => c.name)), [classes]);
 
     const entities = useMemo(() => {
         if (viewMode === 'class') {
@@ -238,21 +267,47 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pt-2 border-t border-border/50">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
                             {viewMode === 'day' && (
-                                <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl">
-                                    {DAYS_OF_WEEK.slice(1).map((day, index) => (
+                                <>
+                                    <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl">
+                                        {DAYS_OF_WEEK.slice(1).map((day, index) => (
+                                            <button
+                                                key={index + 1}
+                                                onClick={() => setSelectedDay(index + 1)}
+                                                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                                                    selectedDay === index + 1
+                                                        ? 'bg-background text-foreground shadow-sm'
+                                                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                                                }`}
+                                            >
+                                                {day.slice(0, 3)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl">
                                         <button
-                                            key={index + 1}
-                                            onClick={() => setSelectedDay(index + 1)}
-                                            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                                                selectedDay === index + 1
+                                            onClick={() => setDayLayout('horizontal')}
+                                            title="Tampilan Horizontal (Baris Kelas)"
+                                            className={`p-1.5 rounded-lg transition-all ${
+                                                dayLayout === 'horizontal'
                                                     ? 'bg-background text-foreground shadow-sm'
                                                     : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                                             }`}
                                         >
-                                            {day.slice(0, 3)}
+                                            <Rows className="h-4 w-4" />
                                         </button>
-                                    ))}
-                                </div>
+                                        <button
+                                            onClick={() => setDayLayout('vertical')}
+                                            title="Tampilan Vertikal (Baris JP)"
+                                            className={`p-1.5 rounded-lg transition-all ${
+                                                dayLayout === 'vertical'
+                                                    ? 'bg-background text-foreground shadow-sm'
+                                                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                                            }`}
+                                        >
+                                            <Columns className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </>
                             )}
 
                             {(viewMode === 'class' || viewMode === 'teacher') && (
@@ -329,9 +384,11 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                                             Cetak {viewMode === 'class' ? 'Per Kelas' : 'Per Guru'} ({selectedEntity})
                                         </DropdownMenuItem>
                                     )}
-                                    <DropdownMenuItem onClick={() => handlePrint('combined')}>
-                                        Cetak Semua (Gabungan)
-                                    </DropdownMenuItem>
+                                    {viewMode !== 'teacher' && (
+                                        <DropdownMenuItem onClick={() => handlePrint('combined')}>
+                                            Cetak Semua (Gabungan)
+                                        </DropdownMenuItem>
+                                    )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
@@ -368,75 +425,170 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="overflow-x-auto">
-                                <table className="w-full border-collapse schedule-grid">
-                                    <thead>
-                                        <tr>
-                                            <th className="sticky left-0 z-10 bg-muted min-w-[120px]">Kelas</th>
-                                            {lessonSlots.map((slot) => (
-                                                <th
-                                                    key={slot.id}
-                                                    className={
-                                                        currentTimeSlot?.jp === slot.jp && selectedDay === getCurrentDay()
-                                                            ? 'current-timeslot-header'
-                                                            : ''
-                                                    }
-                                                >
-                                                    <div className="flex flex-col items-center py-1">
-                                                        <span className="font-bold text-white">JP {slot.jp}</span>
-                                                        <span className="text-xs text-slate-300">
-                                                            {slot.startTime}-{slot.endTime}
-                                                        </span>
-                                                    </div>
-                                                </th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {tableData.length === 0 ? (
+                             <div className="overflow-x-auto">
+                                {dayLayout === 'horizontal' ? (
+                                    <table className="w-full border-collapse schedule-grid">
+                                        <thead>
                                             <tr>
-                                                <td colSpan={lessonSlots.length + 1} className="text-center py-8 text-muted-foreground">
-                                                    Belum ada data jadwal
-                                                </td>
+                                                <th className="sticky left-0 z-10 bg-muted min-w-[120px]">Kelas</th>
+                                                {lessonSlots.map((slot) => (
+                                                    <th
+                                                        key={slot.id}
+                                                        className={
+                                                            currentTimeSlot?.jp === slot.jp && selectedDay === getCurrentDay()
+                                                                ? 'current-timeslot-header'
+                                                                : ''
+                                                        }
+                                                    >
+                                                        <div className="flex flex-col items-center py-1">
+                                                            <span className="font-bold text-white">JP {slot.jp}</span>
+                                                            <span className="text-xs text-slate-300">
+                                                                {slot.startTime}-{slot.endTime}
+                                                            </span>
+                                                        </div>
+                                                    </th>
+                                                ))}
                                             </tr>
-                                        ) : (
-                                            tableData.map(({ entity, slots }) => (
-                                                <tr key={entity}>
-                                                    <td className="sticky left-0 z-10 bg-background font-medium">
-                                                        {entity}
+                                        </thead>
+                                        <tbody>
+                                            {tableData.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={lessonSlots.length + 1} className="text-center py-8 text-muted-foreground">
+                                                        Belum ada data jadwal
                                                     </td>
-                                                    {slots.map(({ slot, schedule }) => (
-                                                        <td
-                                                            key={slot.id}
-                                                            className={
-                                                                currentTimeSlot?.jp === slot.jp && selectedDay === getCurrentDay()
-                                                                    ? 'current-timeslot'
-                                                                    : ''
-                                                            }
-                                                        >
-                                                            {schedule ? (
-                                                                <motion.div
-                                                                    initial={{ opacity: 0, scale: 0.95 }}
-                                                                    animate={{ opacity: 1, scale: 1 }}
-                                                                    className="p-2 rounded-lg shadow-sm border"
-                                                                    style={{
-                                                                        backgroundColor: getEntityColor(schedule.guru, 'teacher'),
-                                                                        borderColor: 'rgba(0,0,0,0.1)'
-                                                                    }}
-                                                                >
-                                                                    <div className="font-bold text-sm text-slate-800 leading-tight">{schedule.mapel}</div>
-                                                                    <div className="text-[10px] text-slate-600 mt-1">{schedule.guru}</div>
-                                                                </motion.div>
-                                                            ) : (
-                                                                <span className="text-slate-300 text-lg">—</span>
-                                                            )}
-                                                        </td>
-                                                    ))}
                                                 </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                                            ) : (
+                                                tableData.map(({ entity, slots }) => (
+                                                    <tr key={entity}>
+                                                        <td className="sticky left-0 z-10 bg-background font-medium">
+                                                            {entity}
+                                                        </td>
+                                                        {slots.map(({ slot, schedule }) => (
+                                                            <td
+                                                                key={slot.id}
+                                                                className={
+                                                                    currentTimeSlot?.jp === slot.jp && selectedDay === getCurrentDay()
+                                                                        ? 'current-timeslot'
+                                                                        : ''
+                                                                }
+                                                            >
+                                                                {schedule ? (
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, scale: 0.95 }}
+                                                                        animate={{ opacity: 1, scale: 1 }}
+                                                                        className="p-2 rounded-lg shadow-sm border"
+                                                                        style={{
+                                                                            backgroundColor: getEntityColor(schedule.guru, 'teacher'),
+                                                                            borderColor: 'rgba(0,0,0,0.1)'
+                                                                        }}
+                                                                    >
+                                                                        <div className="font-bold text-sm text-slate-800 dark:text-slate-200 leading-tight">{schedule.mapel}</div>
+                                                                        <div className="text-[10px] text-slate-600 dark:text-slate-400 mt-1">{schedule.guru}</div>
+                                                                    </motion.div>
+                                                                ) : (
+                                                                    <span className="text-slate-300 dark:text-slate-700 text-lg">—</span>
+                                                                )}
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <table className="w-full border-collapse schedule-grid">
+                                        <thead>
+                                            <tr>
+                                                <th className="sticky left-0 z-10 bg-muted min-w-[120px]">Jam Pelajaran</th>
+                                                {classNames.map((cls: string) => (
+                                                    <th key={cls}>{cls}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {lessonSlots.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={classNames.length + 1} className="text-center py-8 text-muted-foreground">
+                                                        Belum ada data waktu
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                lessonSlots.map((slot) => {
+                                                    if (slot.type === 'break') {
+                                                        return (
+                                                            <tr key={slot.id || slot.order} className="schedule-break-row">
+                                                                <td className="sticky left-0 z-10 bg-muted font-bold text-center">
+                                                                    {slot.startTime} - {slot.endTime}
+                                                                </td>
+                                                                <td colSpan={classNames.length} className="py-2 h-12 text-center">
+                                                                    {slot.name || 'Istirahat'}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <tr key={slot.id}>
+                                                            <td
+                                                                className={`sticky left-0 z-10 bg-background font-medium text-center ${
+                                                                    currentTimeSlot?.jp === slot.jp && selectedDay === getCurrentDay()
+                                                                        ? 'current-timeslot-header'
+                                                                        : ''
+                                                                }`}
+                                                            >
+                                                                <div className="flex flex-col items-center py-1">
+                                                                    <span className="font-bold">JP {slot.jp}</span>
+                                                                    <span className="text-[10px] text-muted-foreground">
+                                                                        {slot.startTime}-{slot.endTime}
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+                                                            {classNames.map((cls: string) => {
+                                                                const schedule = schedules.find(
+                                                                    (s) =>
+                                                                        Number(s.day) === selectedDay &&
+                                                                        Number(s.jp) === Number(slot.jp) &&
+                                                                        (s.classes || []).includes(cls)
+                                                                );
+                                                                return (
+                                                                    <td
+                                                                        key={cls}
+                                                                        className={
+                                                                            currentTimeSlot?.jp === slot.jp && selectedDay === getCurrentDay()
+                                                                                ? 'current-timeslot'
+                                                                                : ''
+                                                                        }
+                                                                    >
+                                                                        {schedule ? (
+                                                                            <motion.div
+                                                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                                                animate={{ opacity: 1, scale: 1 }}
+                                                                                className="p-2 rounded-lg shadow-sm border"
+                                                                                style={{
+                                                                                    backgroundColor: getEntityColor(schedule.guru, 'teacher'),
+                                                                                    borderColor: 'rgba(0,0,0,0.1)'
+                                                                                }}
+                                                                            >
+                                                                                <div className="font-bold text-sm text-slate-800 dark:text-slate-200 leading-tight">
+                                                                                    {schedule.mapel}
+                                                                                </div>
+                                                                                <div className="text-[10px] text-slate-600 dark:text-slate-400 mt-1">
+                                                                                    {schedule.guru}
+                                                                                </div>
+                                                                            </motion.div>
+                                                                        ) : (
+                                                                            <span className="text-slate-300 dark:text-slate-700 text-lg">—</span>
+                                                                        )}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -453,7 +605,7 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                                 entityName={selectedEntity}
                                 entityType={viewMode === 'class' ? 'class' : 'teacher'}
                                 schedules={schedules}
-                                timeSlots={timeSlots}
+                                timeSlots={timeSlots.filter(slot => slot.dayType !== 'saturday')}
                             />
                         </CardContent>
                     </Card>
@@ -481,7 +633,7 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                         </CardHeader>
                         <CardContent>
                             <div className="flex flex-wrap gap-2">
-                                {timeSlots.map((slot) => (
+                                {dayTimeSlots.map((slot) => (
                                     <Badge
                                         key={slot.id}
                                         variant={slot.type === 'break' ? 'secondary' : 'outline'}
@@ -598,7 +750,7 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {timeSlots.sort((a, b) => a.order - b.order).map(slot => {
+                                        {timeSlots.filter(slot => slot.dayType !== 'saturday').sort((a, b) => a.order - b.order).map(slot => {
                                             if (slot.type === 'break') {
                                                 return (
                                                     <tr key={slot.id}>

@@ -71,13 +71,13 @@ export function WeeklyGridView({ entityName, entityType, schedules, timeSlots }:
                                                         borderColor: 'rgba(0,0,0,0.1)'
                                                     }}
                                                 >
-                                                    <div className="font-bold text-sm text-slate-800 leading-tight">{schedule.mapel}</div>
-                                                    <div className="text-[10px] text-slate-600 mt-1">
+                                                    <div className="font-bold text-sm text-slate-800 dark:text-slate-200 leading-tight">{schedule.mapel}</div>
+                                                    <div className="text-[10px] text-slate-600 dark:text-slate-400 mt-1">
                                                         {entityType === 'class' ? schedule.guru : schedule.classes?.join(', ')}
                                                     </div>
                                                 </motion.div>
                                             ) : (
-                                                <div className="flex items-center justify-center h-full text-slate-200">—</div>
+                                                <div className="flex items-center justify-center h-full text-slate-200 dark:text-slate-700">—</div>
                                             )}
                                         </td>
                                     );

@@ -6,7 +6,10 @@ import {
     Pen,
     Save,
     Loader2,
-    ExternalLink
+    ExternalLink,
+    Database,
+    Download,
+    Upload
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -22,6 +25,19 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+import { db, getDbPath } from '@/lib/firebase';
+import { collection, getDocs, getDoc, setDoc, writeBatch, doc } from 'firebase/firestore';
 import { useSignatureSettings, useJpCalculationMethod, usePiketApi, useInfoLinks } from '@/hooks/useFirebase';
 
 export function Settings() {
@@ -38,6 +54,157 @@ export function Settings() {
     const [newLinkTitle, setNewLinkTitle] = useState('');
     const [newLinkUrl, setNewLinkUrl] = useState('');
     const [saving, setSaving] = useState(false);
+    const [backingUp, setBackingUp] = useState(false);
+    const [restoring, setRestoring] = useState(false);
+    const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+    const [selectedRestoreFile, setSelectedRestoreFile] = useState<File | null>(null);
+
+    const handleBackup = async () => {
+        setBackingUp(true);
+        try {
+            const getCollectionData = async (name: string) => {
+                const snapshot = await getDocs(collection(db, getDbPath(name)));
+                return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            };
+
+            const schedules = await getCollectionData('schedules');
+            const guru = await getCollectionData('guru');
+            const kelas = await getCollectionData('kelas');
+            const mapel = await getCollectionData('mapel');
+            const tugas = await getCollectionData('tugas');
+            const timeSlots = await getCollectionData('timeSlots');
+            const infoLinks = await getCollectionData('infoLinks');
+
+            const getConfigDoc = async (docName: string) => {
+                const docSnap = await getDoc(doc(db, getDbPath('config'), docName));
+                return docSnap.exists() ? docSnap.data() : null;
+            };
+
+            const config = {
+                signatures: await getConfigDoc('signatures'),
+                jpCalculation: await getConfigDoc('jpCalculation'),
+                piketApi: await getConfigDoc('piketApi')
+            };
+
+            const backupData = {
+                version: '1.0',
+                exportedAt: new Date().toISOString(),
+                data: {
+                    schedules,
+                    guru,
+                    kelas,
+                    mapel,
+                    tugas,
+                    timeSlots,
+                    infoLinks,
+                    config
+                }
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `backup-jadwal-${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        } catch (error) {
+            console.error('Failed to create backup:', error);
+            alert('Gagal membuat backup data');
+        } finally {
+            setBackingUp(false);
+        }
+    };
+
+    const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setSelectedRestoreFile(file);
+        setShowRestoreConfirm(true);
+        e.target.value = '';
+    };
+
+    const proceedRestore = async () => {
+        if (!selectedRestoreFile) return;
+        setRestoring(true);
+        setShowRestoreConfirm(false);
+        try {
+            const fileReader = new FileReader();
+            fileReader.onload = async (event) => {
+                try {
+                    const parsed = JSON.parse(event.target?.result as string);
+                    if (!parsed.version || !parsed.data) {
+                        throw new Error('Format file backup tidak valid');
+                    }
+
+                    const { schedules, guru, kelas, mapel, tugas, timeSlots, infoLinks, config } = parsed.data;
+
+                    const collectionsToClear = ['schedules', 'guru', 'kelas', 'mapel', 'tugas', 'timeSlots', 'infoLinks'];
+                    for (const col of collectionsToClear) {
+                        const snapshot = await getDocs(collection(db, getDbPath(col)));
+                        const batch = writeBatch(db);
+                        snapshot.docs.forEach((doc) => {
+                            batch.delete(doc.ref);
+                        });
+                        await batch.commit();
+                    }
+
+                    const restoreCol = async (colName: string, items: any[]) => {
+                        if (!items || items.length === 0) return;
+                        const chunkSize = 400;
+                        for (let i = 0; i < items.length; i += chunkSize) {
+                            const chunk = items.slice(i, i + chunkSize);
+                            const batch = writeBatch(db);
+                            chunk.forEach((item) => {
+                                const docRef = item.id
+                                    ? doc(db, getDbPath(colName), item.id)
+                                    : doc(collection(db, getDbPath(colName)));
+                                const data = { ...item };
+                                delete data.id;
+                                batch.set(docRef, data);
+                            });
+                            await batch.commit();
+                        }
+                    };
+
+                    await restoreCol('schedules', schedules);
+                    await restoreCol('guru', guru);
+                    await restoreCol('kelas', kelas);
+                    await restoreCol('mapel', mapel);
+                    await restoreCol('tugas', tugas);
+                    await restoreCol('timeSlots', timeSlots);
+                    await restoreCol('infoLinks', infoLinks);
+
+                    if (config) {
+                        if (config.signatures) {
+                            await setDoc(doc(db, getDbPath('config'), 'signatures'), config.signatures);
+                        }
+                        if (config.jpCalculation) {
+                            await setDoc(doc(db, getDbPath('config'), 'jpCalculation'), config.jpCalculation);
+                        }
+                        if (config.piketApi) {
+                            await setDoc(doc(db, getDbPath('config'), 'piketApi'), config.piketApi);
+                        }
+                    }
+
+                    alert('Data berhasil dipulihkan!');
+                    window.location.reload();
+                } catch (err: any) {
+                    console.error(err);
+                    alert('Gagal mengimpor file: ' + err.message);
+                } finally {
+                    setRestoring(false);
+                    setSelectedRestoreFile(null);
+                }
+            };
+            fileReader.readAsText(selectedRestoreFile);
+        } catch (error) {
+            console.error('Failed to restore backup:', error);
+            alert('Gagal memproses file restore');
+            setRestoring(false);
+            setSelectedRestoreFile(null);
+        }
+    };
 
     // Initialize form values when data loads
     useEffect(() => {
@@ -279,6 +446,88 @@ export function Settings() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Backup & Restore Data */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Database className="h-5 w-5 text-primary" />
+                        Backup & Restore Data
+                    </CardTitle>
+                    <CardDescription>
+                        Ekspor seluruh data jadwal dan pengaturan ke file JSON, atau pulihkan dari file cadangan sebelumnya.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex-1 p-4 border rounded-xl space-y-3 bg-muted/20">
+                            <h3 className="font-bold text-sm">Cadangkan Data (Backup)</h3>
+                            <p className="text-xs text-muted-foreground">
+                                Mengunduh seluruh data guru, kelas, mata pelajaran, jadwal, dan pengaturan ke file JSON.
+                            </p>
+                            <Button
+                                onClick={handleBackup}
+                                disabled={backingUp}
+                                className="w-full flex items-center justify-center gap-2"
+                            >
+                                {backingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                                Ekspor ke JSON
+                            </Button>
+                        </div>
+
+                        <div className="flex-1 p-4 border rounded-xl space-y-3 bg-muted/20">
+                            <h3 className="font-bold text-sm text-destructive">Pulihkan Data (Restore)</h3>
+                            <p className="text-xs text-muted-foreground">
+                                Mengunggah file JSON backup untuk menimpa seluruh data jadwal dan pengaturan saat ini.
+                            </p>
+                            <div className="relative">
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    id="restore-file-upload"
+                                    className="hidden"
+                                    onChange={handleRestore}
+                                    disabled={restoring}
+                                />
+                                <Button
+                                    variant="outline"
+                                    onClick={() => document.getElementById('restore-file-upload')?.click()}
+                                    disabled={restoring}
+                                    className="w-full flex items-center justify-center gap-2 border-destructive hover:bg-destructive/5 dark:hover:bg-destructive/10 text-destructive font-medium"
+                                >
+                                    {restoring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                    Impor dari JSON
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Restore Confirmation Dialog */}
+            <AlertDialog open={showRestoreConfirm} onOpenChange={setShowRestoreConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-destructive flex items-center gap-2">
+                            Peringatan Pemulihan Data
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-2 text-sm text-muted-foreground">
+                            <span className="font-medium text-foreground block">
+                                Tindakan ini akan menghapus seluruh data jadwal pelajaran, guru, kelas, mata pelajaran, istirahat, dan pengaturan saat ini.
+                            </span>
+                            <span className="block mt-2">
+                                Data tersebut akan digantikan sepenuhnya oleh data yang ada pada file cadangan (JSON). Pastikan file cadangan Anda valid. Tindakan ini tidak dapat dibatalkan.
+                            </span>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setSelectedRestoreFile(null)}>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={proceedRestore} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Ya, Pulihkan Sekarang
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

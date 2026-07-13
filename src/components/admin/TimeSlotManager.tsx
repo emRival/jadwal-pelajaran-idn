@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
     Plus,
@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     Dialog,
     DialogContent,
@@ -51,6 +52,8 @@ import { TimeSlot } from '@/types';
 
 export function TimeSlotManager() {
     const { timeSlots, loading, isUsingDefaults, addTimeSlot, updateTimeSlot, deleteTimeSlot, seedDefaultTimeSlots } = useTimeSlots();
+    const weekdaySlots = useMemo(() => timeSlots.filter(s => s.dayType !== 'saturday'), [timeSlots]);
+    const saturdaySlots = useMemo(() => timeSlots.filter(s => s.dayType === 'saturday'), [timeSlots]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingSlot, setEditingSlot] = useState<TimeSlot | null>(null);
     const [seeding, setSeeding] = useState(false);
@@ -61,6 +64,7 @@ export function TimeSlotManager() {
     const [formName, setFormName] = useState('');
     const [formStartTime, setFormStartTime] = useState('07:30');
     const [formEndTime, setFormEndTime] = useState('08:15');
+    const [formDayType, setFormDayType] = useState<'weekday' | 'saturday'>('weekday');
 
     const handleInitialize = async () => {
         setSeeding(true);
@@ -79,6 +83,7 @@ export function TimeSlotManager() {
         setFormName('');
         setFormStartTime('07:30');
         setFormEndTime('08:15');
+        setFormDayType('weekday');
         setEditingSlot(null);
     };
 
@@ -116,6 +121,7 @@ export function TimeSlotManager() {
         setFormName(slot.name || '');
         setFormStartTime(slot.startTime);
         setFormEndTime(slot.endTime);
+        setFormDayType(slot.dayType || 'weekday');
         setIsDialogOpen(true);
     };
 
@@ -124,7 +130,8 @@ export function TimeSlotManager() {
             type: formType,
             startTime: formStartTime,
             endTime: formEndTime,
-            order: editingSlot?.order || getNextOrder()
+            order: editingSlot?.order || getNextOrder(),
+            dayType: formDayType
         };
 
         if (formType === 'lesson') {
@@ -147,18 +154,19 @@ export function TimeSlotManager() {
         await deleteTimeSlot(id);
     };
 
-    const moveSlot = async (index: number, direction: 'up' | 'down') => {
+    const moveSlot = async (index: number, direction: 'up' | 'down', dayType: 'weekday' | 'saturday') => {
         if (isUsingDefaults) {
             console.warn('Cannot reorder default time slots');
             return;
         }
 
+        const list = dayType === 'saturday' ? saturdaySlots : weekdaySlots;
         const newIndex = direction === 'up' ? index - 1 : index + 1;
-        if (newIndex < 0 || newIndex >= timeSlots.length) return;
+        if (newIndex < 0 || newIndex >= list.length) return;
 
         // Get the two slots to swap
-        const currentSlot = timeSlots[index];
-        const targetSlot = timeSlots[newIndex];
+        const currentSlot = list[index];
+        const targetSlot = list[newIndex];
 
         // Use unique order values based on their new positions
         // This handles cases where order values might be duplicated
@@ -278,6 +286,20 @@ export function TimeSlotManager() {
                                             </SelectContent>
                                         </Select>
                                     </div>
+ 
+                                    {/* Day Type Selection */}
+                                    <div className="space-y-2">
+                                        <Label>Hari Berlaku</Label>
+                                        <Select value={formDayType} onValueChange={(v) => setFormDayType(v as 'weekday' | 'saturday')}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="weekday">Weekday (Senin - Jumat)</SelectItem>
+                                                <SelectItem value="saturday">Sabtu</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
 
                                     {/* JP Number (for lessons) */}
                                     {formType === 'lesson' && (
@@ -353,102 +375,121 @@ export function TimeSlotManager() {
                     </div>
 
                     {/* Time Slots List */}
-                    <div className="border rounded-lg divide-y">
-                        {timeSlots.length === 0 ? (
-                            <div className="p-8 text-center text-muted-foreground">
-                                Belum ada pengaturan waktu
-                            </div>
-                        ) : (
-                            timeSlots.map((slot, index) => (
-                                <motion.div
-                                    key={slot.id}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.03 }}
-                                    className={`flex items-center justify-between p-4 ${slot.type === 'break' ? 'bg-green-50 dark:bg-green-950' : ''
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-4">
-                                        {/* Move buttons */}
-                                        <div className="flex flex-col gap-0.5">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6"
-                                                onClick={() => moveSlot(index, 'up')}
-                                                disabled={index === 0 || isUsingDefaults}
-                                            >
-                                                <ChevronUp className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6"
-                                                onClick={() => moveSlot(index, 'down')}
-                                                disabled={index === timeSlots.length - 1 || isUsingDefaults}
-                                            >
-                                                <ChevronDown className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {slot.type === 'break' ? (
-                                                <>
-                                                    <Coffee className="h-4 w-4 text-green-600" />
-                                                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                                                        {slot.name}
-                                                    </Badge>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Clock className="h-4 w-4 text-primary" />
-                                                    <Badge>JP {slot.jp}</Badge>
-                                                </>
-                                            )}
-                                        </div>
-                                        <span className="text-muted-foreground">
-                                            {slot.startTime} - {slot.endTime}
-                                        </span>
+                    {(() => {
+                        const renderSlotsList = (slots: TimeSlot[], dayType: 'weekday' | 'saturday') => (
+                            <div className="border rounded-lg divide-y">
+                                {slots.length === 0 ? (
+                                    <div className="p-8 text-center text-muted-foreground">
+                                        Belum ada pengaturan waktu untuk {dayType === 'saturday' ? 'Sabtu' : 'Weekday'}
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => openEditDialog(slot)}
-                                            disabled={isUsingDefaults}
+                                ) : (
+                                    slots.map((slot, index) => (
+                                        <motion.div
+                                            key={slot.id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.03 }}
+                                            className={`flex items-center justify-between p-4 ${slot.type === 'break' ? 'bg-green-50 dark:bg-green-950' : ''
+                                                }`}
                                         >
-                                            Edit
-                                        </Button>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" disabled={isUsingDefaults}>
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Hapus Waktu?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        {slot.type === 'lesson'
-                                                            ? `JP ${slot.jp}`
-                                                            : slot.name} akan dihapus. Tindakan ini tidak dapat dibatalkan.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                    <AlertDialogAction
-                                                        onClick={() => handleDelete(slot.id)}
-                                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            <div className="flex items-center gap-4">
+                                                {/* Move buttons */}
+                                                <div className="flex flex-col gap-0.5">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6"
+                                                        onClick={() => moveSlot(index, 'up', dayType)}
+                                                        disabled={index === 0 || isUsingDefaults}
                                                     >
-                                                        Hapus
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </div>
-                                </motion.div>
-                            ))
-                        )}
-                    </div>
+                                                        <ChevronUp className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6"
+                                                        onClick={() => moveSlot(index, 'down', dayType)}
+                                                        disabled={index === slots.length - 1 || isUsingDefaults}
+                                                    >
+                                                        <ChevronDown className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {slot.type === 'break' ? (
+                                                        <>
+                                                            <Coffee className="h-4 w-4 text-green-600" />
+                                                            <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                                                                {slot.name}
+                                                            </Badge>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Clock className="h-4 w-4 text-primary" />
+                                                            <Badge>JP {slot.jp}</Badge>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                <span className="text-muted-foreground">
+                                                    {slot.startTime} - {slot.endTime}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => openEditDialog(slot)}
+                                                    disabled={isUsingDefaults}
+                                                >
+                                                    Edit
+                                                </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" disabled={isUsingDefaults}>
+                                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Hapus Waktu?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                {slot.type === 'lesson'
+                                                                    ? `JP ${slot.jp}`
+                                                                    : slot.name} akan dihapus. Tindakan ini tidak dapat dibatalkan.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                            <AlertDialogAction
+                                                                onClick={() => handleDelete(slot.id)}
+                                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                            >
+                                                                Hapus
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        </motion.div>
+                                    ))
+                                )}
+                            </div>
+                        );
+
+                        return (
+                            <Tabs defaultValue="weekday" className="w-full">
+                                <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50 p-1 rounded-xl">
+                                    <TabsTrigger value="weekday" className="rounded-lg">Weekday (Senin - Jumat)</TabsTrigger>
+                                    <TabsTrigger value="saturday" className="rounded-lg">Sabtu</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="weekday" className="space-y-4">
+                                    {renderSlotsList(weekdaySlots, 'weekday')}
+                                </TabsContent>
+                                <TabsContent value="saturday" className="space-y-4">
+                                    {renderSlotsList(saturdaySlots, 'saturday')}
+                                </TabsContent>
+                            </Tabs>
+                        );
+                    })()}
                 </div>
             </CardContent>
         </Card>

@@ -18,10 +18,10 @@ export function getCurrentTimeSlot(timeSlots: TimeSlot[]): TimeSlot | null {
     return null;
 }
 
-// Get current day (1-6, no Sunday)
+// Get current day (1-5, no Sunday/Saturday)
 export function getCurrentDay(): number {
     const day = new Date().getDay();
-    return day === 0 ? 1 : day; // Default to Monday if Sunday
+    return (day === 0 || day === 6) ? 1 : day; // Default to Monday if Sunday or Saturday
 }
 
 // Format time slot for display
@@ -79,7 +79,13 @@ export function getEntityColor(name: string, type: 'teacher' | 'subject' | 'clas
     const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const hue = hash % 360;
     const saturation = type === 'teacher' ? 70 : type === 'subject' ? 60 : 50;
-    const lightness = 85;
+    
+    // Detect dark mode, but ignore it if we are printing
+    const isDark = typeof document !== 'undefined' && 
+                   document.documentElement.classList.contains('dark') && 
+                   !(typeof window !== 'undefined' && window.matchMedia('print').matches);
+    const lightness = isDark ? 25 : 85;
+    
     return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 

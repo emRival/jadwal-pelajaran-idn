@@ -83,6 +83,7 @@ function generateCodeMaps(schedules: Schedule[]) {
 
 export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS as any), signatureSettings, infoLinks = [], showQr = false }: FullSchedulePrintProps) {
     const { smpMap, smkMap } = useMemo(() => generateCodeMaps(schedules), [schedules]);
+    const weekdayTimeSlots = useMemo(() => timeSlots.filter(slot => slot.dayType !== 'saturday'), [timeSlots]);
 
     const { smpClasses, smkClasses, activeDays } = useMemo(() => {
         const classSet = new Set<string>();
@@ -131,7 +132,7 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
                 </tr>
             </thead>
             <tbody>
-                {timeSlots.sort((a, b) => a.order - b.order).map(slot => {
+                {weekdayTimeSlots.sort((a, b) => a.order - b.order).map(slot => {
                     const isBreak = slot.type === 'break';
                     if (isBreak) {
                         return (

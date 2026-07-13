@@ -40,6 +40,7 @@ export interface TimeSlot {
     endTime: string;
     name?: string;
     order: number;
+    dayType?: 'weekday' | 'saturday';
 }
 
 export interface SignatureSettings {

@@ -112,7 +112,13 @@ export function ScheduleEditor() {
         conflicts: string[];
     }[]>([]);
 
-    const lessonSlots = getLessonTimeSlots(timeSlots);
+    const lessonSlots = useMemo(() => {
+        const isSaturdaySelected = formDays.includes(6);
+        if (isSaturdaySelected) {
+            return getLessonTimeSlots(timeSlots).filter(slot => slot.dayType === 'saturday');
+        }
+        return getLessonTimeSlots(timeSlots).filter(slot => slot.dayType !== 'saturday');
+    }, [timeSlots, formDays]);
 
     const previewTargetJps = useMemo(() => {
         if (!isMultiJp) return [formJp];

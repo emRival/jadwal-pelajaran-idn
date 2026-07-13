@@ -95,6 +95,9 @@ function AppContent() {
           <p className="mt-1 opacity-70">
             Sistem Informasi Jadwal Pelajaran & Manajemen Tugas Guru
           </p>
+          <p className="mt-2 text-xs opacity-60">
+            Dibuat oleh <span className="font-semibold text-foreground/85">Muhammad Rival</span>
+          </p>
         </div>
       </footer>
     </div>

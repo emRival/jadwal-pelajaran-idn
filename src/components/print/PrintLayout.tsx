@@ -122,17 +122,17 @@ export function PrintLayout({
                 {!hideQr && showQr && infoLinks.length > 0 && (
                     <div className="mt-2 pt-2 border-t border-slate-200 qr-section">
                         <h4 className="font-bold mb-1.5 text-[8px] text-center uppercase tracking-wider text-slate-700">Informasi Penting (Scan QR Code)</h4>
-                        <div className="flex flex-wrap gap-4 justify-center">
+                        <div className="flex flex-wrap gap-2 justify-center">
                             {infoLinks.map(link => (
-                                <div key={link.id} className="text-center w-16">
+                                <div key={link.id} className="text-center w-12">
                                     <div className="bg-white p-0.5 inline-block mb-0.5">
                                         <img
-                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(link.url)}`}
-                                            className="w-10 h-10 border border-black"
+                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(link.url)}`}
+                                            className="w-9 h-9 border border-black"
                                             alt={link.title}
                                         />
                                     </div>
-                                    <p className="text-[7px] font-semibold leading-tight text-slate-700">{link.title}</p>
+                                    <p className="text-[6.5px] font-semibold leading-tight text-slate-700">{link.title}</p>
                                 </div>
                             ))}
                         </div>

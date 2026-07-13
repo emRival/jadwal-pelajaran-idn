@@ -18,13 +18,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
     Popover,
     PopoverContent,
     PopoverTrigger,
@@ -245,20 +238,20 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pt-2 border-t border-border/50">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
                             {viewMode === 'day' && (
-                                <div className="flex items-center gap-2 bg-background border rounded-lg px-2 h-10">
-                                    <Calendar className="h-4 w-4 text-muted-foreground mr-1" />
-                                    <Select value={String(selectedDay)} onValueChange={(v) => setSelectedDay(Number(v))}>
-                                        <SelectTrigger className="border-0 focus:ring-0 w-[130px] font-medium shadow-none">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {DAYS_OF_WEEK.slice(1).map((day, index) => (
-                                                <SelectItem key={index + 1} value={String(index + 1)}>
-                                                    {day}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl">
+                                    {DAYS_OF_WEEK.slice(1).map((day, index) => (
+                                        <button
+                                            key={index + 1}
+                                            onClick={() => setSelectedDay(index + 1)}
+                                            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                                                selectedDay === index + 1
+                                                    ? 'bg-background text-foreground shadow-sm'
+                                                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                                            }`}
+                                        >
+                                            {day.slice(0, 3)}
+                                        </button>
+                                    ))}
                                 </div>
                             )}
 

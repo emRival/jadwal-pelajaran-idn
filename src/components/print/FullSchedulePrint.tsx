@@ -85,13 +85,22 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
         return timeSlots.filter(slot => slot.dayType !== 'saturday').sort((a, b) => a.order - b.order);
     }, [timeSlots]);
 
-    const { smpClasses, activeDays } = useMemo(() => {
+    const saturdayTimeSlots = useMemo(() => {
+        return timeSlots.filter(slot => slot.dayType === 'saturday').sort((a, b) => a.order - b.order);
+    }, [timeSlots]);
+
+    const hasSaturdayTimeSlots = saturdayTimeSlots.length > 0;
+
+    const { smpClasses, weekdayDays, saturdayDays } = useMemo(() => {
         const classSet = new Set<string>();
-        const daySet = new Set<number>();
+        const weekdaySet = new Set<number>();
+        const saturdaySet = new Set<number>();
 
         schedules.forEach(s => {
             (s.classes || []).forEach(c => classSet.add(c));
-            if (s.day) daySet.add(Number(s.day));
+            const dayNum = Number(s.day);
+            if (dayNum >= 1 && dayNum <= 5) weekdaySet.add(dayNum);
+            if (dayNum === 6) saturdaySet.add(6);
         });
 
         const allClasses = sortClasses(Array.from(classSet));
@@ -100,26 +109,32 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
             return g >= 7 && g <= 9;
         });
 
-        const days = Array.from(daySet).filter(d => d >= 1 && d <= 6).sort((a, b) => a - b);
+        const weekdays = Array.from(weekdaySet).sort((a, b) => a - b);
+        const saturdays = saturdaySet.has(6) ? [6] : [];
 
-        return { smpClasses: smp, activeDays: days };
+        return { smpClasses: smp, weekdayDays: weekdays, saturdayDays: saturdays };
     }, [schedules]);
 
-    const renderTable = (classes: string[], codeMap: TeacherCodeMap) => (
+    const renderTable = (classes: string[], codeMap: TeacherCodeMap, days: number[], timeSlotList: TimeSlot[], tableLabel?: string) => (
         <div className="border border-slate-950 overflow-hidden rounded-md">
+            {tableLabel && (
+                <div className="bg-slate-200 text-center py-0.5 text-[7px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-950">
+                    {tableLabel}
+                </div>
+            )}
             <table className="w-full border-collapse text-[6px] table-fixed print-table">
                 <thead>
                     <tr className="bg-slate-100 text-slate-900 border-b border-slate-950">
                         <th rowSpan={2} className="w-[5%] border-r border-slate-950 p-1 font-bold text-center">Waktu</th>
                         <th rowSpan={2} className="w-[2%] border-r border-slate-950 p-1 font-bold text-center">Ke</th>
-                        {activeDays.map((dayNum, i) => (
+                        {days.map((dayNum, i) => (
                             <th key={dayNum} colSpan={classes.length} className={`border-r last:border-r-0 border-slate-950 p-1 font-bold uppercase text-center ${i % 2 === 0 ? 'bg-slate-50/50' : 'bg-slate-100/50'}`}>
-                                {DAYS_OF_WEEK[dayNum]}
+                                {DAYS_OF_WEEK[dayNum]}{dayNum === 6 ? ' (SG)' : ''}
                             </th>
                         ))}
                     </tr>
                     <tr className="border-b border-slate-950">
-                        {activeDays.map(dayNum => (
+                        {days.map(dayNum => (
                             <React.Fragment key={dayNum + '-sub'}>
                                 {classes.map(cls => (
                                     <th key={dayNum + cls} className="border-r last:border-r-0 border-slate-950 p-0.5 text-center font-bold text-[6px] bg-slate-50 text-slate-800">
@@ -131,12 +146,12 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
                     </tr>
                 </thead>
                 <tbody>
-                    {weekdayTimeSlots.map(slot => {
+                    {timeSlotList.map(slot => {
                         const isBreak = slot.type === 'break';
                         if (isBreak) {
                             return (
-                                <tr key={slot.id || slot.order} className="border-b border-slate-950 bg-emerald-50/40">
-                                    <td colSpan={2 + (activeDays.length * classes.length)} className="text-center font-bold py-1 text-[7px] text-emerald-800 tracking-wider">
+                                <tr key={slot.id || `break-${slot.order}`} className="border-b border-slate-950 bg-emerald-50/40">
+                                    <td colSpan={2 + (days.length * classes.length)} className="text-center font-bold py-1 text-[7px] text-emerald-800 tracking-wider">
                                         {slot.name || 'Istirahat'}
                                     </td>
                                 </tr>
@@ -144,11 +159,11 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
                         }
 
                         return (
-                            <tr key={slot.id || slot.order} className="border-b last:border-b-0 border-slate-950">
+                            <tr key={slot.id || `slot-${slot.order}`} className="border-b last:border-b-0 border-slate-950">
                                 <td className="border-r border-slate-950 text-center p-0.5 font-bold bg-slate-50/60 font-mono text-[5.5px] align-middle">{slot.startTime}-{slot.endTime}</td>
                                 <td className="border-r border-slate-950 text-center p-0.5 font-bold bg-slate-50/40 align-middle">{slot.jp}</td>
 
-                                {activeDays.map(dayNum => (
+                                {days.map(dayNum => (
                                     <React.Fragment key={dayNum}>
                                         {classes.map(cls => {
                                             const schedule = schedules.find(s =>
@@ -249,6 +264,8 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
     };
 
     const hasSmp = smpClasses.length > 0;
+    const hasWeekday = weekdayDays.length > 0;
+    const hasSaturday = saturdayDays.length > 0;
 
     if (!hasSmp) {
         return (
@@ -257,6 +274,9 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
             </div>
         );
     }
+
+    const useSaturdayTable = hasSaturday && hasSaturdayTimeSlots;
+    const saturdayFallback = hasSaturday && !hasSaturdayTimeSlots;
 
     return (
         <div className="w-full">
@@ -267,8 +287,10 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
                 landscape={true}
                 showQr={showQr}
             >
-                <div className="mb-4">
-                    {renderTable(smpClasses, smpMap)}
+                <div className="mb-4 space-y-4">
+                    {hasWeekday && renderTable(smpClasses, smpMap, weekdayDays, weekdayTimeSlots)}
+                    {useSaturdayTable && renderTable(smpClasses, smpMap, saturdayDays, saturdayTimeSlots, 'Stadium General - Sabtu')}
+                    {saturdayFallback && renderTable(smpClasses, smpMap, saturdayDays, weekdayTimeSlots, 'Stadium General - Sabtu')}
                     {renderLegend(smpMap)}
                 </div>
             </PrintLayout>

@@ -50,12 +50,12 @@ function generateCodeMaps(schedules: Schedule[]) {
 
     schedules.forEach(s => {
         if (!s.guru || !s.classes || s.classes.length === 0) return;
+        if (Number(s.day) === 6) return;
 
         const category = getSubjectCategory(s.mapel);
         const className = s.classes[0];
         const grade = extractGrade(className);
 
-        // SMP classes only (Grade 7 - 9)
         if (grade >= 7 && grade <= 9) {
             smpTeachers[category].add(s.guru);
         }

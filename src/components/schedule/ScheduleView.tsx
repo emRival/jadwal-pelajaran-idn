@@ -285,26 +285,37 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                             {viewMode === 'day' && (
                                 <>
                                     <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl">
-                                        {DAYS_OF_WEEK.slice(1).map((day, index) => (
-                                            <button
-                                                key={index + 1}
-                                                onClick={() => setSelectedDay(index + 1)}
-                                                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                                                    selectedDay === index + 1
-                                                        ? 'bg-background text-foreground shadow-sm'
-                                                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                                                }`}
-                                            >
-                                                {day === 'Sabtu' ? (
-                                                    <span className="flex items-center gap-1">
-                                                        {day.slice(0, 3)}
-                                                        <span className="text-[9px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded font-semibold leading-none">SG</span>
+                                        {DAYS_OF_WEEK.slice(1).map((day, index) => {
+                                            const isToday = (index + 1) === getCurrentDay();
+                                            const isSelected = selectedDay === (index + 1);
+                                            return (
+                                                <button
+                                                    key={index + 1}
+                                                    onClick={() => setSelectedDay(index + 1)}
+                                                    className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                                                        isSelected
+                                                            ? 'bg-background text-foreground shadow-sm'
+                                                            : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                                                    }`}
+                                                >
+                                                    <span className="flex flex-col items-center gap-0.5">
+                                                        <span className="flex items-center gap-1">
+                                                            {day === 'Sabtu' ? (
+                                                                <>
+                                                                    {day.slice(0, 3)}
+                                                                    <span className="text-[9px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded font-semibold leading-none">SG</span>
+                                                                </>
+                                                            ) : (
+                                                                day.slice(0, 3)
+                                                            )}
+                                                        </span>
+                                                        {isToday && (
+                                                            <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-primary' : 'bg-primary/50'}`} />
+                                                        )}
                                                     </span>
-                                                ) : (
-                                                    day.slice(0, 3)
-                                                )}
-                                            </button>
-                                        ))}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                     <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl">
                                         <button

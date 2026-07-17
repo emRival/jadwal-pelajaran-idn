@@ -295,7 +295,14 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                                                         : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                                                 }`}
                                             >
-                                                {day.slice(0, 3)}
+                                                {day === 'Sabtu' ? (
+                                                    <span className="flex items-center gap-1">
+                                                        {day.slice(0, 3)}
+                                                        <span className="text-[9px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded font-semibold leading-none">SG</span>
+                                                    </span>
+                                                ) : (
+                                                    day.slice(0, 3)
+                                                )}
                                             </button>
                                         ))}
                                     </div>
@@ -453,6 +460,9 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                             <CardTitle className="flex items-center gap-2">
                                 <Calendar className="h-5 w-5" />
                                 Jadwal {getDayName(selectedDay)}
+                                {selectedDay === 6 && (
+                                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">Stadium General</span>
+                                )}
                             </CardTitle>
                         </CardHeader>
                         <CardContent>

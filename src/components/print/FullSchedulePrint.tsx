@@ -277,6 +277,37 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
         )
     };
 
+    const renderSGLegend = (sgSchedules: Schedule[]) => {
+        const map = new Map<string, Set<string>>();
+        sgSchedules.forEach(s => {
+            if (!s.guru) return;
+            if (!map.has(s.guru)) map.set(s.guru, new Set());
+            if (s.mapel) map.get(s.guru)!.add(s.mapel);
+        });
+        const teacherMapelList = Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+        if (teacherMapelList.length === 0) return null;
+
+        return (
+            <div className="mt-4 text-[7px] leading-tight border border-slate-200 p-3 rounded-lg bg-slate-50/30">
+                <h4 className="font-bold border-b pb-1 uppercase tracking-wider text-[8px] text-slate-700 mb-2">
+                    Daftar Guru & Mata Pelajaran SG
+                </h4>
+                <div className="grid grid-cols-3 gap-x-4 gap-y-0.5">
+                    {teacherMapelList.map(([guru, mapels]) => (
+                        <div key={guru} className="flex items-start gap-1.5 py-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-violet-500 mt-0.5 flex-shrink-0"></span>
+                            <span className="text-slate-800">
+                                <strong>{guru}</strong>
+                                <span className="text-slate-500 ml-1">— {Array.from(mapels).join(', ')}</span>
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     const hasSmp = smpClasses.length > 0;
     const hasWeekday = weekdayDays.length > 0;
     const hasSaturday = saturdayDays.length > 0;
@@ -291,6 +322,10 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
 
     const useSaturdayTable = hasSaturday && hasSaturdayTimeSlots;
     const saturdayFallback = hasSaturday && !hasSaturdayTimeSlots;
+
+    const saturdaySchedules = useMemo(() => {
+        return schedules.filter(s => Number(s.day) === 6 && extractGrade(s.classes?.[0] || '') >= 7 && extractGrade(s.classes?.[0] || '') <= 9);
+    }, [schedules]);
 
     return (
         <div className="w-full">
@@ -325,7 +360,7 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
                         <div className="mb-4">
                             {useSaturdayTable && renderTable(smpClasses, smpMap, saturdayDays, saturdayTimeSlots, 'Stadium General - Sabtu', true)}
                             {saturdayFallback && renderTable(smpClasses, smpMap, saturdayDays, weekdayTimeSlots, 'Stadium General - Sabtu', true)}
-                            {renderLegend(smpMap)}
+                            {renderSGLegend(saturdaySchedules)}
                         </div>
                     </PrintLayout>
                 </div>

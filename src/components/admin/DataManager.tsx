@@ -55,9 +55,9 @@ type EntityType = 'teachers' | 'classes' | 'subjects' | 'tasks';
 
 export function DataManager() {
     const { teachers, loading: teachersLoading, addTeacher, updateTeacher, deleteTeacher } = useTeachers();
-    const { classes, loading: classesLoading, addClass, deleteClass } = useClasses();
+    const { classes, loading: classesLoading, addClass, updateClass, deleteClass } = useClasses();
     const { subjects, loading: subjectsLoading, addSubject, updateSubject, deleteSubject } = useSubjects();
-    const { tasks, loading: tasksLoading, addTask, deleteTask } = useTasks();
+    const { tasks, loading: tasksLoading, addTask, updateTask, deleteTask } = useTasks();
 
     const [activeTab, setActiveTab] = useState<EntityType>('teachers');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -131,6 +131,12 @@ export function DataManager() {
             } else {
                 await addTeacher(newName.trim(), selectedTasks);
             }
+        } else if (activeTab === 'classes') {
+            if (editingId) {
+                await updateClass(editingId, newName.trim());
+            } else {
+                await addClass(newName.trim());
+            }
         } else if (activeTab === 'subjects') {
             if (editingId) {
                 await updateSubject(editingId, {
@@ -141,9 +147,11 @@ export function DataManager() {
                 await addSubject(newName.trim(), newGuru);
             }
         } else if (activeTab === 'tasks') {
-            await addTask(newName.trim(), newJp);
-        } else {
-            await config.addFn(newName.trim());
+            if (editingId) {
+                await updateTask(editingId, { name: newName.trim(), jp: newJp });
+            } else {
+                await addTask(newName.trim(), newJp);
+            }
         }
 
         handleCloseDialog();
@@ -175,10 +183,19 @@ export function DataManager() {
             setNewName(item.name);
             setSelectedTasks(item.tasks || []);
             setIsDialogOpen(true);
+        } else if (activeTab === 'classes') {
+            setEditingId(item.id);
+            setNewName(item.name);
+            setIsDialogOpen(true);
         } else if (activeTab === 'subjects') {
             setEditingId(item.id);
             setNewName(item.name);
             setNewGuru(item.guru || '');
+            setIsDialogOpen(true);
+        } else if (activeTab === 'tasks') {
+            setEditingId(item.id);
+            setNewName(item.name);
+            setNewJp(item.jp || 1);
             setIsDialogOpen(true);
         }
     };
@@ -399,11 +416,9 @@ export function DataManager() {
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-1">
-                                                    {(activeTab === 'teachers' || activeTab === 'subjects') && (
-                                                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
-                                                            <Edit className="h-4 w-4 text-blue-500" />
-                                                        </Button>
-                                                    )}
+                                                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
+                                                        <Edit className="h-4 w-4 text-blue-500" />
+                                                    </Button>
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild>
                                                             <Button variant="ghost" size="icon">

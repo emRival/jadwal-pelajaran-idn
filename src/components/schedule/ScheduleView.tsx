@@ -233,6 +233,23 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                 </style>
             )}
 
+            {/* Piket Print View */}
+            {viewMode === 'piket' && (
+                <style>
+                    {`
+                        @media print {
+                            @page {
+                                size: portrait;
+                                margin: 10mm;
+                            }
+                            body {
+                                -webkit-print-color-adjust: exact;
+                            }
+                        }
+                    `}
+                </style>
+            )}
+
             {/* Controls */}
             <Card className="no-print">
                 <CardContent className="pt-6">
@@ -369,27 +386,42 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                         </div>
 
                         <div className="flex items-center gap-2 w-full md:w-auto">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className="flex-1 md:flex-none flex items-center justify-center gap-2 h-10 no-print hover:bg-muted/50 transition-colors">
-                                        <Printer className="h-4 w-4" />
-                                        <span>Cetak Jadwal</span>
-                                        <ChevronDown className="h-4 w-4 opacity-50" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    {selectedEntity && (
-                                        <DropdownMenuItem onClick={() => handlePrint('single')}>
-                                            Cetak {viewMode === 'class' ? 'Per Kelas' : 'Per Guru'} ({selectedEntity})
-                                        </DropdownMenuItem>
-                                    )}
-                                    {viewMode !== 'teacher' && (
-                                        <DropdownMenuItem onClick={() => handlePrint('combined')}>
-                                            Cetak Semua (Gabungan)
-                                        </DropdownMenuItem>
-                                    )}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                            {viewMode !== 'piket' ? (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            disabled={(viewMode === 'class' || viewMode === 'teacher') && !selectedEntity}
+                                            className="flex-1 md:flex-none flex items-center justify-center gap-2 h-10 no-print hover:bg-muted/50 transition-colors"
+                                        >
+                                            <Printer className="h-4 w-4" />
+                                            <span>Cetak Jadwal</span>
+                                            <ChevronDown className="h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        {selectedEntity && (
+                                            <DropdownMenuItem onClick={() => handlePrint('single')}>
+                                                Cetak {viewMode === 'class' ? 'Per Kelas' : 'Per Guru'} ({selectedEntity})
+                                            </DropdownMenuItem>
+                                        )}
+                                        {viewMode !== 'teacher' && (
+                                            <DropdownMenuItem onClick={() => handlePrint('combined')}>
+                                                Cetak Semua (Gabungan)
+                                            </DropdownMenuItem>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            ) : (
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 md:flex-none flex items-center justify-center gap-2 h-10 no-print hover:bg-muted/50 transition-colors"
+                                    onClick={() => window.print()}
+                                >
+                                    <Printer className="h-4 w-4" />
+                                    <span>Cetak Jadwal Piket</span>
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </CardContent>

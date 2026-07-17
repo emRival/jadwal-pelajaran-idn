@@ -115,7 +115,7 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
         return { smpClasses: smp, weekdayDays: weekdays, saturdayDays: saturdays };
     }, [schedules]);
 
-    const renderTable = (classes: string[], codeMap: TeacherCodeMap, days: number[], timeSlotList: TimeSlot[], tableLabel?: string) => (
+    const renderTable = (classes: string[], codeMap: TeacherCodeMap, days: number[], timeSlotList: TimeSlot[], tableLabel?: string, showMapel = false) => (
         <div className="border border-slate-950 overflow-hidden rounded-md">
             {tableLabel && (
                 <div className="bg-slate-200 text-center py-0.5 text-[7px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-950">
@@ -175,21 +175,35 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
                                             let content = '-';
                                             let cellStyle: React.CSSProperties = {};
 
-                                            if (schedule && schedule.guru) {
-                                                const info = codeMap.get(schedule.guru);
-                                                if (info) {
-                                                    content = info.code;
-                                                    if (info.category === 'IT') {
-                                                        cellStyle = { backgroundColor: '#fef3c7', color: '#92400e' }; // Amber
-                                                    } else if (info.category === 'Diniyah') {
-                                                        cellStyle = { backgroundColor: '#d1fae5', color: '#065f46' }; // Emerald
-                                                    } else if (info.category === 'English') {
-                                                        cellStyle = { backgroundColor: '#e0f2fe', color: '#075985' }; // Sky
-                                                    } else if (info.category === 'BK') {
-                                                        cellStyle = { backgroundColor: '#ffe4e6', color: '#9f1239' }; // Rose
+                                            if (schedule) {
+                                                if (showMapel) {
+                                                    content = schedule.mapel || schedule.guru?.substring(0, 6) || '-';
+                                                    const cat = getSubjectCategory(schedule.mapel);
+                                                    if (cat === 'IT') {
+                                                        cellStyle = { backgroundColor: '#fef3c7', color: '#92400e' };
+                                                    } else if (cat === 'Diniyah') {
+                                                        cellStyle = { backgroundColor: '#d1fae5', color: '#065f46' };
+                                                    } else if (cat === 'English') {
+                                                        cellStyle = { backgroundColor: '#e0f2fe', color: '#075985' };
+                                                    } else if (cat === 'BK') {
+                                                        cellStyle = { backgroundColor: '#ffe4e6', color: '#9f1239' };
                                                     }
-                                                } else {
-                                                    content = schedule.guru.substring(0, 3).toUpperCase();
+                                                } else if (schedule.guru) {
+                                                    const info = codeMap.get(schedule.guru);
+                                                    if (info) {
+                                                        content = info.code;
+                                                        if (info.category === 'IT') {
+                                                            cellStyle = { backgroundColor: '#fef3c7', color: '#92400e' };
+                                                        } else if (info.category === 'Diniyah') {
+                                                            cellStyle = { backgroundColor: '#d1fae5', color: '#065f46' };
+                                                        } else if (info.category === 'English') {
+                                                            cellStyle = { backgroundColor: '#e0f2fe', color: '#075985' };
+                                                        } else if (info.category === 'BK') {
+                                                            cellStyle = { backgroundColor: '#ffe4e6', color: '#9f1239' };
+                                                        }
+                                                    } else {
+                                                        content = schedule.guru.substring(0, 3).toUpperCase();
+                                                    }
                                                 }
                                             }
 
@@ -280,20 +294,42 @@ export function FullSchedulePrint({ schedules, timeSlots = (DEFAULT_TIME_SLOTS a
 
     return (
         <div className="w-full">
-            <PrintLayout
-                title="JADWAL PELAJARAN GABUNGAN - SMP"
-                signatureSettings={signatureSettings || null}
-                infoLinks={infoLinks}
-                landscape={true}
-                showQr={showQr}
-            >
-                <div className="mb-4 space-y-4">
-                    {hasWeekday && renderTable(smpClasses, smpMap, weekdayDays, weekdayTimeSlots)}
-                    {useSaturdayTable && renderTable(smpClasses, smpMap, saturdayDays, saturdayTimeSlots, 'Stadium General - Sabtu')}
-                    {saturdayFallback && renderTable(smpClasses, smpMap, saturdayDays, weekdayTimeSlots, 'Stadium General - Sabtu')}
-                    {renderLegend(smpMap)}
+            {/* Page 1: Weekday Schedule */}
+            {hasWeekday && (
+                <div style={{ pageBreakAfter: 'always' }}>
+                    <PrintLayout
+                        title="JADWAL PELAJARAN GABUNGAN - SMP"
+                        signatureSettings={signatureSettings || null}
+                        infoLinks={infoLinks}
+                        landscape={true}
+                        showQr={showQr}
+                    >
+                        <div className="mb-4">
+                            {renderTable(smpClasses, smpMap, weekdayDays, weekdayTimeSlots)}
+                            {renderLegend(smpMap)}
+                        </div>
+                    </PrintLayout>
                 </div>
-            </PrintLayout>
+            )}
+
+            {/* Page 2: Saturday / Stadium General Schedule */}
+            {(useSaturdayTable || saturdayFallback) && (
+                <div>
+                    <PrintLayout
+                        title="JADWAL STADIUM GENERAL - SMP"
+                        signatureSettings={signatureSettings || null}
+                        infoLinks={infoLinks}
+                        landscape={true}
+                        showQr={showQr}
+                    >
+                        <div className="mb-4">
+                            {useSaturdayTable && renderTable(smpClasses, smpMap, saturdayDays, saturdayTimeSlots, 'Stadium General - Sabtu', true)}
+                            {saturdayFallback && renderTable(smpClasses, smpMap, saturdayDays, weekdayTimeSlots, 'Stadium General - Sabtu', true)}
+                            {renderLegend(smpMap)}
+                        </div>
+                    </PrintLayout>
+                </div>
+            )}
         </div>
     );
 }

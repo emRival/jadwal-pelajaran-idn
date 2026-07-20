@@ -97,12 +97,14 @@ export function Header({ darkMode, toggleDarkMode }: HeaderProps) {
         { id: 'settings', label: 'Pengaturan', path: '/settings' },
     ];
 
+    const [loginError, setLoginError] = useState('');
     const handleLogin = async () => {
-        try {
-            await signInWithGoogle();
+        setLoginError('');
+        const result = await signInWithGoogle();
+        if (result.success) {
             setLoginDialogOpen(false);
-        } catch (error) {
-            console.error('Login error:', error);
+        } else if (result.error) {
+            setLoginError(result.error);
         }
     };
 
@@ -343,6 +345,12 @@ export function Header({ darkMode, toggleDarkMode }: HeaderProps) {
 
                     {/* Body */}
                     <div className="px-8 py-7 space-y-5">
+                        {loginError && (
+                            <div className="bg-red-50 border border-red-200 text-red-700 text-sm text-center py-2.5 px-3 rounded-xl">
+                                {loginError}
+                            </div>
+                        )}
+
                         <Button 
                             onClick={handleLogin} 
                             className="w-full flex items-center justify-center gap-3 h-12 text-[15px] font-medium bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm hover:shadow-md rounded-xl" 

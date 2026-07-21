@@ -258,7 +258,7 @@ export function TeacherStats() {
                                                     )}
                                                 </div>
                                             </TableHead>
-                                            {DAYS_OF_WEEK.slice(1).map((day, i) => (
+                                            {DAYS_OF_WEEK.slice(1, 6).map((day, i) => (
                                                 <TableHead key={i} className="text-center">{day.slice(0, 3)}</TableHead>
                                             ))}
                                             <TableHead
@@ -280,7 +280,7 @@ export function TeacherStats() {
                                     <TableBody>
                                         {filteredStats.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                                                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                                                     {searchQuery ? 'Tidak ada hasil yang cocok' : 'Belum ada data guru'}
                                                 </TableCell>
                                             </TableRow>
@@ -306,7 +306,7 @@ export function TeacherStats() {
                                                             )}
                                                         </div>
                                                     </TableCell>
-                                                    {[1, 2, 3, 4, 5, 6].map(day => (
+                                                    {[1, 2, 3, 4, 5].map(day => (
                                                         <TableCell key={day} className="text-center">
                                                             {teacher.byDay[day] > 0 ? (
                                                                 <Badge variant="outline">{teacher.byDay[day]}</Badge>
@@ -397,12 +397,11 @@ export function TeacherStats() {
                             <thead>
                                 <tr className="bg-slate-100 text-slate-900 border-b border-slate-950">
                                     <th className="border-r border-slate-950 p-2.5 font-bold text-left w-[22%]">Nama Guru</th>
-                                    <th className="border-r border-slate-950 p-2 font-bold text-center w-[5%]">Sen</th>
-                                    <th className="border-r border-slate-950 p-2 font-bold text-center w-[5%]">Sel</th>
-                                    <th className="border-r border-slate-950 p-2 font-bold text-center w-[5%]">Rab</th>
-                                    <th className="border-r border-slate-950 p-2 font-bold text-center w-[5%]">Kam</th>
-                                    <th className="border-r border-slate-950 p-2 font-bold text-center w-[5%]">Jum</th>
-                                    <th className="border-r border-slate-950 p-2 font-bold text-center w-[5%]">Sab</th>
+                                    <th className="border-r border-slate-950 p-2 font-bold text-center w-[6%]">Sen</th>
+                                    <th className="border-r border-slate-950 p-2 font-bold text-center w-[6%]">Sel</th>
+                                    <th className="border-r border-slate-950 p-2 font-bold text-center w-[6%]">Rab</th>
+                                    <th className="border-r border-slate-950 p-2 font-bold text-center w-[6%]">Kam</th>
+                                    <th className="border-r border-slate-950 p-2 font-bold text-center w-[6%]">Jum</th>
                                     <th className="border-r border-slate-950 p-2 font-bold text-center w-[8%] bg-slate-50/50">KBM</th>
                                     <th className="border-r border-slate-950 p-2 font-bold text-center w-[25%]">Tugas Tambahan</th>
                                     <th className="p-2 font-bold text-center w-[15%] bg-slate-50/50">Total JP & Grafik Beban</th>
@@ -427,7 +426,7 @@ export function TeacherStats() {
                                                 <div className="text-[8px] text-slate-400 mt-1 italic">Tidak ada jadwal KBM</div>
                                             )}
                                         </td>
-                                        {[1, 2, 3, 4, 5, 6].map(day => (
+                                        {[1, 2, 3, 4, 5].map(day => (
                                             <td key={day} className="border-r border-slate-950 p-2 text-center font-mono align-middle text-slate-700">
                                                 {teacher.byDay[day] || <span className="text-slate-300">-</span>}
                                             </td>

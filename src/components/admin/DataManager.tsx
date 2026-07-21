@@ -68,6 +68,8 @@ export function DataManager() {
     const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
     const [guruDialogOpen, setGuruDialogOpen] = useState(false);
     const [guruDialogSearch, setGuruDialogSearch] = useState('');
+    const [listSearch, setListSearch] = useState('');
+    const [taskSearch, setTaskSearch] = useState('');
 
     const loading = teachersLoading || classesLoading || subjectsLoading || tasksLoading;
 
@@ -119,6 +121,18 @@ export function DataManager() {
 
     const config = getTabConfig();
 
+    const filteredItems = useMemo(() => {
+        if (!listSearch.trim()) return config.items;
+        const q = listSearch.toLowerCase();
+        return config.items.filter(item => item.name.toLowerCase().includes(q));
+    }, [config.items, listSearch]);
+
+    const filteredTasks = useMemo(() => {
+        if (!taskSearch.trim()) return tasks;
+        const q = taskSearch.toLowerCase();
+        return tasks.filter(t => t.name.toLowerCase().includes(q));
+    }, [tasks, taskSearch]);
+
     const handleSave = async () => {
         if (!newName.trim()) return;
 
@@ -165,6 +179,7 @@ export function DataManager() {
         setSelectedTasks([]);
         setGuruDialogOpen(false);
         setGuruDialogSearch('');
+        setTaskSearch('');
         setIsDialogOpen(false);
     };
 
@@ -221,7 +236,7 @@ export function DataManager() {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as EntityType)}>
+                <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as EntityType); setListSearch(''); }}>
                     <TabsList className="grid grid-cols-4 w-full">
                         <TabsTrigger value="teachers" className="flex items-center gap-2">
                             <Users className="h-4 w-4" />
@@ -273,11 +288,20 @@ export function DataManager() {
                                         {activeTab === 'teachers' && (
                                             <div className="space-y-2">
                                                 <Label>Tugas Tambahan</Label>
+                                                <div className="relative">
+                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                                    <Input
+                                                        placeholder="Cari tugas..."
+                                                        value={taskSearch}
+                                                        onChange={(e) => setTaskSearch(e.target.value)}
+                                                        className="pl-9"
+                                                    />
+                                                </div>
                                                 <div className="border rounded-md p-4 max-h-[200px] overflow-y-auto space-y-2">
-                                                    {tasks.length === 0 ? (
-                                                        <p className="text-sm text-muted-foreground">Belum ada data tugas</p>
+                                                    {filteredTasks.length === 0 ? (
+                                                        <p className="text-sm text-muted-foreground">{taskSearch ? 'Tidak ada tugas ditemukan' : 'Belum ada data tugas'}</p>
                                                     ) : (
-                                                        tasks.map(task => (
+                                                        filteredTasks.map(task => (
                                                             <div key={task.id} className="flex items-center space-x-2">
                                                                 <Checkbox
                                                                     id={`task-${task.id}`}
@@ -390,14 +414,23 @@ export function DataManager() {
                             </Dialog>
 
                             {/* Items List */}
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                <Input
+                                    placeholder={`Cari ${config.title.toLowerCase()}...`}
+                                    value={listSearch}
+                                    onChange={(e) => setListSearch(e.target.value)}
+                                    className="pl-9"
+                                />
+                            </div>
                             <div className="border rounded-lg">
-                                {config.items.length === 0 ? (
+                                {filteredItems.length === 0 ? (
                                     <div className="p-8 text-center text-muted-foreground">
-                                        Belum ada data {config.title.toLowerCase()}
+                                        {listSearch ? `Tidak ada ${config.title.toLowerCase()} ditemukan` : `Belum ada data ${config.title.toLowerCase()}`}
                                     </div>
                                 ) : (
                                     <div className="divide-y">
-                                        {config.items.map((item, index) => (
+                                        {filteredItems.map((item, index) => (
                                             <motion.div
                                                 key={item.id}
                                                 initial={{ opacity: 0, y: 10 }}
@@ -452,7 +485,7 @@ export function DataManager() {
 
                             {/* Summary */}
                             <div className="text-sm text-muted-foreground">
-                                Total: {config.items.length} {config.title.toLowerCase()}
+                                Total: {filteredItems.length} {config.title.toLowerCase()}{listSearch ? ` dari ${config.items.length}` : ''}
                             </div>
                         </div>
                     </TabsContent>

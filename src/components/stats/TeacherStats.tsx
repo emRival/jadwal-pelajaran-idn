@@ -335,9 +335,15 @@ export function TeacherStats() {
                                                         +{teacher.taskJp}
                                                     </TableCell>
                                                     <TableCell className="text-center font-bold">
-                                                        <Badge variant={teacher.grandTotal > 24 ? "destructive" : "default"}>
-                                                            {teacher.grandTotal}
+                                                        <Badge variant={teacher.grandTotal > 24 ? "destructive" : teacher.grandTotal >= 20 ? "default" : "secondary"}>
+                                                            {teacher.grandTotal} JP
                                                         </Badge>
+                                                        {teacher.grandTotal > 24 && (
+                                                            <span className="text-xs text-destructive ml-1">+{teacher.grandTotal - 24}</span>
+                                                        )}
+                                                        {teacher.grandTotal < 20 && (
+                                                            <span className="text-xs text-muted-foreground ml-1">-{20 - teacher.grandTotal}</span>
+                                                        )}
                                                     </TableCell>
                                                 </motion.tr>
                                             ))
@@ -446,21 +452,30 @@ export function TeacherStats() {
                                                 <div className="flex justify-between items-center text-[10px]">
                                                     <span className="font-extrabold text-slate-900">{teacher.grandTotal} JP</span>
                                                     <span className="text-[7.5px] font-bold text-slate-500">
-                                                        {Math.round((teacher.grandTotal / 32) * 100)}% Max
+                                                        {Math.min(Math.round((teacher.grandTotal / 24) * 100), 100)}% dari 24 JP
                                                     </span>
                                                 </div>
                                                 {/* Micro visual progress bar */}
                                                 <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-950/10">
                                                     <div 
                                                         className={`h-full rounded-full ${
-                                                            teacher.grandTotal > 28 
+                                                            teacher.grandTotal > 24 
                                                                 ? 'bg-rose-500' 
-                                                                : teacher.grandTotal > 20 
-                                                                    ? 'bg-amber-500' 
-                                                                    : 'bg-emerald-500'
+                                                                : teacher.grandTotal >= 20 
+                                                                    ? 'bg-emerald-500' 
+                                                                    : 'bg-amber-500'
                                                         }`}
-                                                        style={{ width: `${Math.min((teacher.grandTotal / 32) * 100, 100)}%` }}
+                                                        style={{ width: `${Math.min((teacher.grandTotal / 24) * 100, 100)}%` }}
                                                     />
+                                                </div>
+                                                <div className="text-[7.5px] font-bold mt-0.5">
+                                                    {teacher.grandTotal > 24 ? (
+                                                        <span className="text-rose-600">Lebih {teacher.grandTotal - 24} JP</span>
+                                                    ) : teacher.grandTotal === 24 ? (
+                                                        <span className="text-emerald-600">Pas (24 JP)</span>
+                                                    ) : (
+                                                        <span className="text-amber-600">Kurang {24 - teacher.grandTotal} JP</span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>

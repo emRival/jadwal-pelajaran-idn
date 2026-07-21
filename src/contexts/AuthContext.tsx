@@ -13,6 +13,7 @@ interface AuthContextType {
     user: User | null;
     isAdmin: boolean;
     loading: boolean;
+    authInitialized: boolean;
     signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
     signOut: () => Promise<void>;
 }
@@ -22,12 +23,14 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [authInitialized, setAuthInitialized] = useState(false);
     const { isAdmin, loading: adminLoading } = useAdminCheck(user?.uid ?? null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             setUser(user);
             setLoading(false);
+            setAuthInitialized(true);
         });
         return unsubscribe;
     }, []);
@@ -60,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isAdmin,
         loading: loading || adminLoading,
+        authInitialized,
         signInWithGoogle,
         signOut
     };

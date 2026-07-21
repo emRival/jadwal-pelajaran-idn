@@ -25,7 +25,7 @@ import './index.css';
 
 function AppContent() {
   const [darkMode, setDarkMode] = useState(false);
-  const { isAdmin, loading } = useAuth();
+  const { isAdmin, loading, authInitialized } = useAuth();
   const location = useLocation();
 
   // Check for saved theme preference
@@ -43,8 +43,8 @@ function AppContent() {
     localStorage.setItem('theme', !darkMode ? 'dark' : 'light');
   };
 
-  if (loading) {
-    return null; // Or a loading spinner
+  if (loading || !authInitialized) {
+    return null;
   }
 
   const AdminRoute = ({ children }: { children: React.ReactNode }) => {

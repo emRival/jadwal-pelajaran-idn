@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import * as XLSX from 'xlsx';
 import {
     Plus,
     Edit,
@@ -12,7 +13,8 @@ import {
     Save,
     Search,
     Check,
-    ChevronsUpDown
+    ChevronsUpDown,
+    Download
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -223,6 +225,45 @@ export function DataManager() {
         await config.deleteFn(id);
     };
 
+    const handleExportExcel = () => {
+        const wb = XLSX.utils.book_new();
+
+        const guruData = teachers.map(t => ({
+            'Nama': t.name,
+            'Role': t.role === 'staff' ? 'Staff' : 'Guru',
+            'Tugas Tambahan': (t.tasks || []).map(id => {
+                const task = tasks.find(tk => tk.id === id);
+                return task ? `${task.name} (${task.jp} JP)` : id;
+            }).join(', ')
+        }));
+        const wsGuru = XLSX.utils.json_to_sheet(guruData.length > 0 ? guruData : [{ 'Nama': '', 'Role': '', 'Tugas Tambahan': '' }]);
+        wsGuru['!cols'] = [{ wch: 25 }, { wch: 10 }, { wch: 40 }];
+        XLSX.utils.book_append_sheet(wb, wsGuru, 'Guru');
+
+        const kelasData = classes.map(c => ({ 'Nama Kelas': c.name }));
+        const wsKelas = XLSX.utils.json_to_sheet(kelasData.length > 0 ? kelasData : [{ 'Nama Kelas': '' }]);
+        wsKelas['!cols'] = [{ wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, wsKelas, 'Kelas');
+
+        const mapelData = subjects.map(s => ({
+            'Mata Pelajaran': s.name,
+            'Guru': s.guru || ''
+        }));
+        const wsMapel = XLSX.utils.json_to_sheet(mapelData.length > 0 ? mapelData : [{ 'Mata Pelajaran': '', 'Guru': '' }]);
+        wsMapel['!cols'] = [{ wch: 30 }, { wch: 25 }];
+        XLSX.utils.book_append_sheet(wb, wsMapel, 'Mapel');
+
+        const tugasData = tasks.map(t => ({
+            'Nama Tugas': t.name,
+            'JP': t.jp
+        }));
+        const wsTugas = XLSX.utils.json_to_sheet(tugasData.length > 0 ? tugasData : [{ 'Nama Tugas': '', 'JP': '' }]);
+        wsTugas['!cols'] = [{ wch: 30 }, { wch: 8 }];
+        XLSX.utils.book_append_sheet(wb, wsTugas, 'Tugas');
+
+        XLSX.writeFile(wb, 'Data_Master_IDN.xlsx');
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -233,11 +274,17 @@ export function DataManager() {
 
     return (
         <Card>
-            <CardHeader>
-                <CardTitle>Kelola Data Master</CardTitle>
-                <CardDescription>
-                    Tambah, edit, atau hapus data guru, kelas, mata pelajaran, dan tugas
-                </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                    <CardTitle>Kelola Data Master</CardTitle>
+                    <CardDescription>
+                        Tambah, edit, atau hapus data guru, kelas, mata pelajaran, dan tugas
+                    </CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleExportExcel} className="no-print">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Excel
+                </Button>
             </CardHeader>
             <CardContent>
                 <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as EntityType); setListSearch(''); }}>

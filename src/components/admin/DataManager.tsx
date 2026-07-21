@@ -66,6 +66,7 @@ export function DataManager() {
     const [newJp, setNewJp] = useState(1);
     const [newGuru, setNewGuru] = useState('');
     const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+    const [newRole, setNewRole] = useState<'guru' | 'staff'>('guru');
     const [guruDialogOpen, setGuruDialogOpen] = useState(false);
     const [guruDialogSearch, setGuruDialogSearch] = useState('');
     const [listSearch, setListSearch] = useState('');
@@ -84,8 +85,8 @@ export function DataManager() {
                 return {
                     title: 'Guru',
                     icon: Users,
-                    items: teachers.map(t => ({ id: t.id, name: t.name, tasks: t.tasks })),
-                    addFn: (name: string, tasks?: string[]) => addTeacher(name, tasks),
+                    items: teachers.map(t => ({ id: t.id, name: t.name, tasks: t.tasks, role: t.role })),
+                    addFn: (name: string, tasks?: string[]) => addTeacher(name, tasks, newRole),
                     deleteFn: deleteTeacher,
                     placeholder: 'Nama guru'
                 };
@@ -140,10 +141,11 @@ export function DataManager() {
             if (editingId) {
                 await updateTeacher(editingId, {
                     name: newName.trim(),
-                    tasks: selectedTasks
+                    tasks: selectedTasks,
+                    role: newRole
                 });
             } else {
-                await addTeacher(newName.trim(), selectedTasks);
+                await addTeacher(newName.trim(), selectedTasks, newRole);
             }
         } else if (activeTab === 'classes') {
             if (editingId) {
@@ -188,6 +190,7 @@ export function DataManager() {
         setNewName('');
         setNewGuru('');
         setSelectedTasks([]);
+        setNewRole('guru');
         setNewJp(1);
         setIsDialogOpen(true);
     };
@@ -197,6 +200,7 @@ export function DataManager() {
             setEditingId(item.id);
             setNewName(item.name);
             setSelectedTasks(item.tasks || []);
+            setNewRole(item.role || 'guru');
             setIsDialogOpen(true);
         } else if (activeTab === 'classes') {
             setEditingId(item.id);
@@ -285,6 +289,31 @@ export function DataManager() {
                                                 onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                                             />
                                         </div>
+                                        {activeTab === 'teachers' && (
+                                            <div className="space-y-2">
+                                                <Label>Role</Label>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant={newRole === 'guru' ? 'default' : 'outline'}
+                                                        size="sm"
+                                                        className="flex-1"
+                                                        onClick={() => setNewRole('guru')}
+                                                    >
+                                                        Guru
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant={newRole === 'staff' ? 'default' : 'outline'}
+                                                        size="sm"
+                                                        className="flex-1"
+                                                        onClick={() => setNewRole('staff')}
+                                                    >
+                                                        Staff
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
                                         {activeTab === 'teachers' && (
                                             <div className="space-y-2">
                                                 <Label>Tugas Tambahan</Label>
@@ -441,6 +470,11 @@ export function DataManager() {
                                                 <div className="flex items-center gap-3">
                                                     <config.icon className="h-4 w-4 text-muted-foreground" />
                                                     <span>{item.name}</span>
+                                                    {'role' in item && (
+                                                        <Badge variant={(item as any).role === 'staff' ? 'secondary' : 'default'} className="text-[10px]">
+                                                            {(item as any).role === 'staff' ? 'Staff' : 'Guru'}
+                                                        </Badge>
+                                                    )}
                                                     {'jp' in item && (
                                                         <Badge variant="secondary">{(item as any).jp} JP</Badge>
                                                     )}

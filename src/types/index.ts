@@ -12,6 +12,7 @@ export interface Schedule {
 export interface Teacher {
     id: string;
     name: string;
+    role?: 'guru' | 'staff';
     tasks?: string[];
 }
 

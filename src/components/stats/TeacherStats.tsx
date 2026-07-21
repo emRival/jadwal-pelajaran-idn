@@ -47,10 +47,11 @@ export function TeacherStats() {
 
     const loading = schedulesLoading || teachersLoading;
 
-    // Calculate stats for each teacher (weekday only, excluding Saturday)
+    // Calculate stats for each teacher (weekday only, excluding Saturday, excluding staff)
     const teacherStats = useMemo(() => {
         const weekdaySchedules = schedules.filter(s => Number(s.day) >= 1 && Number(s.day) <= 5);
-        return teachers.map(teacher => {
+        const guruList = teachers.filter(t => t.role !== 'staff');
+        return guruList.map(teacher => {
             const teacherSchedules = weekdaySchedules.filter(s => s.guru === teacher.name);
             const totalJp = calculateTeacherJP(teacher.name, weekdaySchedules, method);
 
@@ -109,6 +110,8 @@ export function TeacherStats() {
         return result;
     }, [teacherStats, searchQuery, sortBy, sortOrder]);
 
+    const guruCount = useMemo(() => teachers.filter(t => t.role !== 'staff').length, [teachers]);
+
     const toggleSort = (column: 'name' | 'jp') => {
         if (sortBy === column) {
             setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -157,7 +160,7 @@ export function TeacherStats() {
                                     </div>
                                     <div>
                                         <p className="text-sm text-muted-foreground">Total Guru</p>
-                                        <p className="text-2xl font-bold">{teachers.length}</p>
+                                        <p className="text-2xl font-bold">{guruCount}</p>
                                     </div>
                                 </div>
                             </CardContent>
@@ -186,8 +189,8 @@ export function TeacherStats() {
                                     <div>
                                         <p className="text-sm text-muted-foreground">Rata-rata JP/Guru</p>
                                         <p className="text-2xl font-bold">
-                                            {teachers.length > 0
-                                                ? (teacherStats.reduce((acc, t) => acc + t.totalJp, 0) / teachers.length).toFixed(1)
+                                            {guruCount > 0
+                                                ? (teacherStats.reduce((acc, t) => acc + t.totalJp, 0) / guruCount).toFixed(1)
                                                 : 0}
                                         </p>
                                     </div>
@@ -203,8 +206,8 @@ export function TeacherStats() {
                                     <div>
                                         <p className="text-sm text-muted-foreground">Rata-rata Grand Total</p>
                                         <p className="text-2xl font-bold">
-                                            {teachers.length > 0
-                                                ? (teacherStats.reduce((acc, t) => acc + t.grandTotal, 0) / teachers.length).toFixed(1)
+                                            {guruCount > 0
+                                                ? (teacherStats.reduce((acc, t) => acc + t.grandTotal, 0) / guruCount).toFixed(1)
                                                 : 0}
                                         </p>
                                     </div>

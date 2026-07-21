@@ -93,8 +93,8 @@ export function useTeachers() {
         return unsubscribe;
     }, []);
 
-    const addTeacher = async (name: string, tasks: string[] = []) => {
-        await addDoc(collection(db, getDbPath('guru')), { name, tasks });
+    const addTeacher = async (name: string, tasks: string[] = [], role: 'guru' | 'staff' = 'guru') => {
+        await addDoc(collection(db, getDbPath('guru')), { name, tasks, role });
     };
 
     const updateTeacher = async (id: string, data: Partial<Teacher>) => {

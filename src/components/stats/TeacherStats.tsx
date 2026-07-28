@@ -50,7 +50,7 @@ export function TeacherStats() {
     // Calculate stats for each teacher (weekday only, excluding Saturday, excluding staff)
     const teacherStats = useMemo(() => {
         const weekdaySchedules = schedules.filter(s => Number(s.day) >= 1 && Number(s.day) <= 5);
-        const guruList = teachers.filter(t => t.role === 'guru');
+        const guruList = teachers.filter(t => t.role !== 'staff');
         return guruList.map(teacher => {
             const teacherSchedules = weekdaySchedules.filter(s => s.guru === teacher.name);
             const totalJp = calculateTeacherJP(teacher.name, weekdaySchedules, method);
@@ -110,7 +110,7 @@ export function TeacherStats() {
         return result;
     }, [teacherStats, searchQuery, sortBy, sortOrder]);
 
-    const guruCount = useMemo(() => teachers.filter(t => t.role === 'guru').length, [teachers]);
+    const guruCount = useMemo(() => teachers.filter(t => t.role !== 'staff').length, [teachers]);
 
     const toggleSort = (column: 'name' | 'jp') => {
         if (sortBy === column) {

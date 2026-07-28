@@ -50,7 +50,7 @@ export function TeacherStats() {
     // Calculate stats for each teacher (weekday only, excluding Saturday, excluding staff)
     const teacherStats = useMemo(() => {
         const weekdaySchedules = schedules.filter(s => Number(s.day) >= 1 && Number(s.day) <= 5);
-        const guruList = teachers.filter(t => t.role !== 'staff');
+        const guruList = teachers.filter(t => t.role === 'guru');
         return guruList.map(teacher => {
             const teacherSchedules = weekdaySchedules.filter(s => s.guru === teacher.name);
             const totalJp = calculateTeacherJP(teacher.name, weekdaySchedules, method);
@@ -110,7 +110,7 @@ export function TeacherStats() {
         return result;
     }, [teacherStats, searchQuery, sortBy, sortOrder]);
 
-    const guruCount = useMemo(() => teachers.filter(t => t.role !== 'staff').length, [teachers]);
+    const guruCount = useMemo(() => teachers.filter(t => t.role === 'guru').length, [teachers]);
 
     const toggleSort = (column: 'name' | 'jp') => {
         if (sortBy === column) {
@@ -204,10 +204,10 @@ export function TeacherStats() {
                                         <BarChart3 className="h-6 w-6 text-purple-600" />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-muted-foreground">Rata-rata Grand Total</p>
+                                        <p className="text-sm text-muted-foreground">Rata-rata JP Mengajar</p>
                                         <p className="text-2xl font-bold">
                                             {guruCount > 0
-                                                ? (teacherStats.reduce((acc, t) => acc + t.grandTotal, 0) / guruCount).toFixed(1)
+                                                ? (teacherStats.reduce((acc, t) => acc + t.totalJp, 0) / guruCount).toFixed(1)
                                                 : 0}
                                         </p>
                                     </div>
@@ -338,14 +338,15 @@ export function TeacherStats() {
                                                         +{teacher.taskJp}
                                                     </TableCell>
                                                     <TableCell className="text-center font-bold">
-                                                        <Badge variant={teacher.grandTotal > 24 ? "destructive" : teacher.grandTotal >= 20 ? "default" : "secondary"}>
-                                                            {teacher.grandTotal} JP
+                                                        <Badge variant={teacher.totalJp >= 24 ? "default" : teacher.totalJp >= 16 ? "secondary" : "destructive"}>
+                                                            {teacher.totalJp} JP
                                                         </Badge>
-                                                        {teacher.grandTotal > 24 && (
-                                                            <span className="text-xs text-destructive ml-1">+{teacher.grandTotal - 24}</span>
-                                                        )}
-                                                        {teacher.grandTotal < 20 && (
-                                                            <span className="text-xs text-muted-foreground ml-1">-{20 - teacher.grandTotal}</span>
+                                                        {teacher.totalJp >= 24 ? (
+                                                            <div className="text-xs text-emerald-600 mt-1">Memenuhi</div>
+                                                        ) : (
+                                                            <div className={`text-xs mt-1 font-semibold ${teacher.totalJp < 16 ? 'text-destructive' : 'text-amber-600'}`}>
+                                                                Belum memenuhi JP
+                                                            </div>
                                                         )}
                                                     </TableCell>
                                                 </motion.tr>
@@ -388,9 +389,9 @@ export function TeacherStats() {
                             </div>
                         </div>
                         <div className="border border-slate-950 p-3 rounded-md bg-slate-100/40 text-center">
-                            <span className="text-[7.5px] uppercase tracking-wider text-slate-600 font-bold">Rata-rata Beban</span>
+                            <span className="text-[7.5px] uppercase tracking-wider text-slate-600 font-bold">Rata-rata JP Mengajar</span>
                             <div className="text-lg font-black text-slate-900 mt-1 leading-none">
-                                {(filteredStats.reduce((acc, t) => acc + t.grandTotal, 0) / (filteredStats.length || 1)).toFixed(1)} JP
+                                {(filteredStats.reduce((acc, t) => acc + t.totalJp, 0) / (filteredStats.length || 1)).toFixed(1)} JP
                             </div>
                         </div>
                     </div>
@@ -407,7 +408,7 @@ export function TeacherStats() {
                                     <th className="border-r border-slate-950 p-2 font-bold text-center w-[6%]">Jum</th>
                                     <th className="border-r border-slate-950 p-2 font-bold text-center w-[8%] bg-slate-50/50">KBM</th>
                                     <th className="border-r border-slate-950 p-2 font-bold text-center w-[25%]">Tugas Tambahan</th>
-                                    <th className="p-2 font-bold text-center w-[15%] bg-slate-50/50">Total JP & Grafik Beban</th>
+                                    <th className="p-2 font-bold text-center w-[15%] bg-slate-50/50">Total JP Mengajar & Grafik</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -452,31 +453,31 @@ export function TeacherStats() {
                                         <td className="p-2 align-middle bg-slate-50/20">
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex justify-between items-center text-[10px]">
-                                                    <span className="font-extrabold text-slate-900">{teacher.grandTotal} JP</span>
+                                                    <span className="font-extrabold text-slate-900">{teacher.totalJp} JP</span>
                                                     <span className="text-[7.5px] font-bold text-slate-500">
-                                                        {Math.min(Math.round((teacher.grandTotal / 24) * 100), 100)}% dari 24 JP
+                                                        {Math.min(Math.round((teacher.totalJp / 24) * 100), 100)}% dari 24 JP
                                                     </span>
                                                 </div>
                                                 {/* Micro visual progress bar */}
                                                 <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-950/10">
                                                     <div 
                                                         className={`h-full rounded-full ${
-                                                            teacher.grandTotal > 24 
-                                                                ? 'bg-rose-500' 
-                                                                : teacher.grandTotal >= 20 
-                                                                    ? 'bg-emerald-500' 
-                                                                    : 'bg-amber-500'
+                                                            teacher.totalJp >= 24 
+                                                                ? 'bg-emerald-500' 
+                                                                : teacher.totalJp >= 16 
+                                                                    ? 'bg-amber-500' 
+                                                                    : 'bg-rose-500'
                                                         }`}
-                                                        style={{ width: `${Math.min((teacher.grandTotal / 24) * 100, 100)}%` }}
+                                                        style={{ width: `${Math.min((teacher.totalJp / 24) * 100, 100)}%` }}
                                                     />
                                                 </div>
                                                 <div className="text-[7.5px] font-bold mt-0.5">
-                                                    {teacher.grandTotal > 24 ? (
-                                                        <span className="text-rose-600">Lebih {teacher.grandTotal - 24} JP</span>
-                                                    ) : teacher.grandTotal === 24 ? (
-                                                        <span className="text-emerald-600">Pas (24 JP)</span>
+                                                    {teacher.totalJp >= 24 ? (
+                                                        <span className="text-emerald-600">Memenuhi (24 JP)</span>
                                                     ) : (
-                                                        <span className="text-amber-600">Kurang {24 - teacher.grandTotal} JP</span>
+                                                        <span className={teacher.totalJp < 16 ? 'text-rose-600' : 'text-amber-600'}>
+                                                            Belum memenuhi JP
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BrowserRouter as Router,
@@ -11,15 +11,16 @@ import {
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Header } from '@/components/layout/Header';
 import { ScheduleView } from '@/components/schedule/ScheduleView';
-import { ScheduleEditor } from '@/components/schedule/ScheduleEditor';
-import { ConflictChecker } from '@/components/schedule/ConflictChecker';
-import { TeacherStats } from '@/components/stats/TeacherStats';
-import { DataManager } from '@/components/admin/DataManager';
-import { TimeSlotManager } from '@/components/admin/TimeSlotManager';
-import { Settings } from '@/components/admin/Settings';
 import { useAuth } from '@/contexts/AuthContext';
 
-import { GraduationCap, Heart, ExternalLink, Calendar, Users, AlertTriangle } from 'lucide-react';
+import { GraduationCap, Heart, ExternalLink, Calendar, Users, AlertTriangle, Loader2 } from 'lucide-react';
+
+const ScheduleEditor = lazy(() => import('@/components/schedule/ScheduleEditor').then(m => ({ default: m.ScheduleEditor })));
+const ConflictChecker = lazy(() => import('@/components/schedule/ConflictChecker').then(m => ({ default: m.ConflictChecker })));
+const TeacherStats = lazy(() => import('@/components/stats/TeacherStats').then(m => ({ default: m.TeacherStats })));
+const DataManager = lazy(() => import('@/components/admin/DataManager').then(m => ({ default: m.DataManager })));
+const TimeSlotManager = lazy(() => import('@/components/admin/TimeSlotManager').then(m => ({ default: m.TimeSlotManager })));
+const Settings = lazy(() => import('@/components/admin/Settings').then(m => ({ default: m.Settings })));
 
 import './index.css';
 
@@ -74,12 +75,12 @@ function AppContent() {
               <Route path="/schedule" element={<Navigate to="/" replace />} />
 
               {/* Protected Routes */}
-              <Route path="/teachers" element={<AdminRoute><TeacherStats /></AdminRoute>} />
-              <Route path="/conflicts" element={<AdminRoute><ConflictChecker /></AdminRoute>} />
-              <Route path="/manage" element={<AdminRoute><ScheduleEditor /></AdminRoute>} />
-              <Route path="/data" element={<AdminRoute><DataManager /></AdminRoute>} />
-              <Route path="/timeslots" element={<AdminRoute><TimeSlotManager /></AdminRoute>} />
-              <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
+              <Route path="/teachers" element={<AdminRoute><Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}><TeacherStats /></Suspense></AdminRoute>} />
+              <Route path="/conflicts" element={<AdminRoute><Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}><ConflictChecker /></Suspense></AdminRoute>} />
+              <Route path="/manage" element={<AdminRoute><Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}><ScheduleEditor /></Suspense></AdminRoute>} />
+              <Route path="/data" element={<AdminRoute><Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}><DataManager /></Suspense></AdminRoute>} />
+              <Route path="/timeslots" element={<AdminRoute><Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}><TimeSlotManager /></Suspense></AdminRoute>} />
+              <Route path="/settings" element={<AdminRoute><Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}><Settings /></Suspense></AdminRoute>} />
 
               {/* Catch-all */}
               <Route path="*" element={<Navigate to="/" replace />} />

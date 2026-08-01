@@ -11,6 +11,7 @@ import {
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Header } from '@/components/layout/Header';
 import { ScheduleView } from '@/components/schedule/ScheduleView';
+import { CetakPage } from '@/components/print/CetakPage';
 import { useAuth } from '@/contexts/AuthContext';
 
 import { GraduationCap, Heart, ExternalLink, Calendar, Users, AlertTriangle, Loader2 } from 'lucide-react';
@@ -23,6 +24,14 @@ const TimeSlotManager = lazy(() => import('@/components/admin/TimeSlotManager').
 const Settings = lazy(() => import('@/components/admin/Settings').then(m => ({ default: m.Settings })));
 
 import './index.css';
+
+// Admin guard for the dedicated stats print page (must be defined at module scope
+// so it is not recreated during render).
+function AdminCetakRoute() {
+  const { isAdmin } = useAuth();
+  if (!isAdmin) return <Navigate to="/" replace />;
+  return <CetakPage />;
+}
 
 function AppContent() {
   const [darkMode, setDarkMode] = useState(false);
@@ -52,6 +61,19 @@ function AppContent() {
     if (!isAdmin) return <Navigate to="/" replace />;
     return <>{children}</>;
   };
+
+  // Dedicated print pages render WITHOUT the app shell (Header/Footer/motion wrapper)
+  // so the printed output only contains the A4 document. The page itself shows a
+  // visible A4 preview + a native "Cetak" button (window.print()) that works on iPad.
+  if (location.pathname.startsWith('/cetak')) {
+    return (
+      <Routes>
+        <Route path="/cetak/statistik" element={<AdminCetakRoute />} />
+        <Route path="/cetak/:type/:entity?" element={<CetakPage />} />
+        <Route path="*" element={<Navigate to="/cetak/gabungan" replace />} />
+      </Routes>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

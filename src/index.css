@@ -186,16 +186,6 @@
     will-change: auto !important;
   }
 
-  /* Ensure print views render in stable document position */
-  #print-single-view,
-  #print-combined-view {
-    position: static !important;
-    left: auto !important;
-    top: auto !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
   .print-table th,
   .print-table td {
     vertical-align: middle !important;

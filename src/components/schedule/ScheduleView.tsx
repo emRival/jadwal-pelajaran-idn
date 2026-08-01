@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from 'react';
-import { flushSync } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
     Search,
@@ -33,9 +32,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { PrintLayout } from '@/components/print/PrintLayout';
-import { FullSchedulePrint } from '@/components/print/FullSchedulePrint';
-import { useSchedules, useTeachers, useClasses, useTimeSlots, useSignatureSettings, useInfoLinks, useTasks, useJpCalculationMethod } from '@/hooks/useFirebase';
+import { useSchedules, useTeachers, useClasses, useTimeSlots, useSignatureSettings, useInfoLinks } from '@/hooks/useFirebase';
 import { useNavigate } from 'react-router-dom';
 import { LoginDialog } from '@/components/layout/LoginDialog';
 import {
@@ -43,10 +40,9 @@ import {
     getCurrentDay,
     getDayName,
     getLessonTimeSlots,
-    getEntityColor,
-    calculateTeacherJP
+    getEntityColor
 } from '@/lib/scheduleUtils';
-import { DAYS_OF_WEEK, DAYS_OF_WEEK_API, TimeSlot } from '@/types';
+import { DAYS_OF_WEEK, TimeSlot } from '@/types';
 import { WeeklyGridView } from './WeeklyGridView';
 import { PiketView } from './PiketView';
 import { Info, ExternalLink } from 'lucide-react';
@@ -70,34 +66,6 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
 
     const { settings: signatureSettings } = useSignatureSettings();
     const { infoLinks } = useInfoLinks();
-    const { tasks } = useTasks();
-    const { method } = useJpCalculationMethod();
-
-    const [printMode, setPrintMode] = useState<'single' | 'combined' | null>(null);
-
-    // Preload QR codes in the background so they're cached before printing
-    useEffect(() => {
-        infoLinks.forEach(link => {
-            const img = new Image();
-            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(link.url)}`;
-        });
-    }, [infoLinks]);
-
-    const handlePrint = (mode: 'single' | 'combined') => {
-        // Force React to commit the print view synchronously.
-        // On iOS Safari / mobile, React reconciliation is slower than desktop,
-        // so window.print() must fire AFTER the print view is in the DOM.
-        flushSync(() => setPrintMode(mode));
-
-        // Wait two animation frames to ensure layout/paint is complete,
-        // then print immediately (keeps window.print() close to the user gesture).
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                window.print();
-                setTimeout(() => setPrintMode(null), 500);
-            });
-        });
-    };
 
     const [viewMode, setViewMode] = useState<ViewMode>('day');
     const [selectedDay, setSelectedDay] = useState(getCurrentDay());
@@ -181,39 +149,6 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
 
     return (
         <div className="space-y-6">
-            {printMode && (
-                <style>
-                    {`
-                        @media print {
-                            @page {
-                                size: ${printMode === 'combined' ? 'landscape' : 'portrait'};
-                                margin: 10mm;
-                            }
-                            body {
-                                -webkit-print-color-adjust: exact;
-                            }
-                        }
-                    `}
-                </style>
-            )}
-
-            {/* Piket Print View */}
-            {viewMode === 'piket' && (
-                <style>
-                    {`
-                        @media print {
-                            @page {
-                                size: portrait;
-                                margin: 10mm;
-                            }
-                            body {
-                                -webkit-print-color-adjust: exact;
-                            }
-                        }
-                    `}
-                </style>
-            )}
-
             {/* Controls */}
             <Card className="no-print">
                 <CardContent className="pt-6">
@@ -383,12 +318,12 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         {selectedEntity && (
-                                            <DropdownMenuItem onClick={() => handlePrint('single')}>
+                                            <DropdownMenuItem onClick={() => window.open(`/cetak/${viewMode === 'class' ? 'kelas' : 'guru'}/${encodeURIComponent(selectedEntity)}`, '_blank')}>
                                                 Cetak {viewMode === 'class' ? 'Per Kelas' : 'Per Guru'} ({selectedEntity})
                                             </DropdownMenuItem>
                                         )}
                                         {viewMode !== 'teacher' && (
-                                            <DropdownMenuItem onClick={() => handlePrint('combined')}>
+                                            <DropdownMenuItem onClick={() => window.open('/cetak/gabungan', '_blank')}>
                                                 Cetak Semua (Gabungan)
                                             </DropdownMenuItem>
                                         )}
@@ -398,7 +333,7 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                                 <Button
                                     variant="outline"
                                     className="flex-1 md:flex-none flex items-center justify-center gap-2 h-10 no-print hover:bg-muted/50 transition-colors"
-                                    onClick={() => window.print()}
+                                    onClick={() => window.open('/cetak/piket', '_blank')}
                                 >
                                     <Printer className="h-4 w-4" />
                                     <span>Cetak Jadwal Piket</span>
@@ -773,151 +708,6 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                 setLoginDialogOpen(open);
                 if (!open) navigate('/');
             }} />
-
-            {/* Print Views - Hidden in UI, Visible in Print */}
-            {
-                printMode === 'single' && (
-                    <div id="print-single-view" className="hidden print:block absolute top-0 left-0 w-full bg-white z-[50]">
-                        {(() => {
-                            const hasSaturday = schedules.some(s => 
-                                Number(s.day) === 6 && 
-                                (viewMode === 'class' ? (s.classes || []).includes(selectedEntity) : s.guru === selectedEntity)
-                            );
-                            const totalDays = hasSaturday ? 7 : 6;
-                            const cols = totalDays + 1; // Days + Jam + Waktu = total columns
-
-                            return (
-                                <PrintLayout
-                                    title={viewMode === 'class' ? `Jadwal Pelajaran Kelas ${selectedEntity}` : `Jadwal Mengajar ${selectedEntity}`}
-                                    signatureSettings={signatureSettings}
-                                    infoLinks={infoLinks}
-                                    showQr={viewMode === 'class'}
-                                >
-                                    <div className="border border-slate-950 overflow-hidden rounded-md">
-                                        <table className="w-full text-[12.5px] leading-normal print-table border-collapse">
-                                            <thead>
-                                                <tr className="bg-slate-100 text-slate-900 border-b border-slate-950">
-                                                    <th className="border-r border-slate-950 p-2 font-bold w-12 text-center">Jam</th>
-                                                    <th className="border-r border-slate-950 p-2 font-bold w-20 text-center">Waktu</th>
-                                                    {DAYS_OF_WEEK_API.slice(1, totalDays).map((day, idx) => (
-                                                        <th key={day} className="border-r last:border-r-0 border-slate-950 p-2 font-bold uppercase text-center">{getDayName(idx + 1)}</th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {timeSlots.filter(slot => slot.dayType !== 'saturday').sort((a, b) => a.order - b.order).map(slot => {
-                                                    if (slot.type === 'break') {
-                                                        return (
-                                                            <tr key={slot.id} className="border-b border-slate-950 bg-emerald-50/50">
-                                                                <td colSpan={cols} className="text-center font-bold py-1.5 text-[11.5px] text-emerald-800 tracking-wide">{slot.name}</td>
-                                                            </tr>
-                                                        )
-                                                    }
-                                                    return (
-                                                        <tr key={slot.id} className="border-b last:border-b-0 border-slate-950">
-                                                            <td className="border-r border-slate-950 text-center p-2 font-semibold bg-slate-50/40">{slot.jp}</td>
-                                                            <td className="border-r border-slate-950 text-center p-2 font-mono text-[11px] bg-slate-50/20">{slot.startTime}-{slot.endTime}</td>
-                                                            {DAYS_OF_WEEK_API.slice(1, totalDays).map((_, dayIdx) => {
-                                                                const dayNum = dayIdx + 1;
-                                                                const schedule = schedules.find(s =>
-                                                                    Number(s.day) === dayNum &&
-                                                                    Number(s.jp) === Number(slot.jp) &&
-                                                                    (viewMode === 'class' ? (s.classes || []).includes(selectedEntity) : s.guru === selectedEntity)
-                                                                );
-
-                                                                const cellColor = schedule
-                                                                    ? getEntityColor(
-                                                                        viewMode === 'class' ? schedule.guru : schedule.mapel,
-                                                                        viewMode === 'class' ? 'teacher' : 'subject'
-                                                                    )
-                                                                    : undefined;
-
-                                                                return (
-                                                                    <td 
-                                                                        key={dayNum} 
-                                                                        className="border-r last:border-r-0 border-slate-950 text-center p-2 align-middle"
-                                                                        style={cellColor ? { backgroundColor: cellColor } : undefined}
-                                                                    >
-                                                                        {schedule ? (
-                                                                            <div className="space-y-1.5">
-                                                                                <div className="font-bold text-slate-900 leading-normal">{schedule.mapel}</div>
-                                                                                <div className="text-[12px] text-slate-700 font-semibold">{viewMode === 'class' ? schedule.guru : (schedule.classes || []).join(', ')}</div>
-                                                                            </div>
-                                                                        ) : <span className="text-slate-300">-</span>}
-                                                                    </td>
-                                                                );
-                                                            })}
-                                                        </tr>
-                                                    )
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    {viewMode === 'teacher' && selectedEntity && (
-                                        <div className="mt-4 border border-slate-950 p-3 text-[10px] rounded-md">
-                                            <h3 className="font-bold border-b border-slate-950 mb-2 pb-1.5 uppercase tracking-wide text-slate-800">Detail Beban Mengajar & Tugas</h3>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <table className="w-full border-collapse">
-                                                        <tbody>
-                                                            <tr>
-                                                                <td className="py-1">Beban Mengajar</td>
-                                                                <td className="py-1 text-right font-bold">{calculateTeacherJP(selectedEntity, schedules, method)} JP</td>
-                                                            </tr>
-                                                            {(() => {
-                                                                const teacher = teachers.find(t => t.name === selectedEntity);
-                                                                const teacherTasks = teacher?.tasks?.map(taskId => tasks.find(t => t.id === taskId)).filter(Boolean) || [];
-                                                                const taskJp = teacherTasks.reduce((acc, t) => acc + (t?.jp || 0), 0);
-                                                                const grandTotal = calculateTeacherJP(selectedEntity, schedules, method) + taskJp;
-
-                                                                return (
-                                                                    <>
-                                                                        {teacherTasks.map((task, i) => (
-                                                                            <tr key={i} className="text-muted-foreground">
-                                                                                <td className="py-0.5 pr-2">• {task?.name}</td>
-                                                                                <td className="py-0.5 text-right">{task?.jp} JP</td>
-                                                                            </tr>
-                                                                        ))}
-                                                                        <tr className="border-t border-slate-950 font-bold">
-                                                                            <td className="py-1">Total Beban Tugas</td>
-                                                                            <td className="py-1 text-right">{grandTotal} JP</td>
-                                                                        </tr>
-                                                                    </>
-                                                                );
-                                                            })()}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                                <div className="text-[9px] italic text-muted-foreground flex items-end justify-end">
-                                                    * 1 JP = {timeSlots.find(s => s.type === 'lesson')?.startTime && timeSlots.find(s => s.type === 'lesson')?.endTime ?
-                                                        (parseInt(timeSlots.find(s => s.type === 'lesson')!.endTime.split(':')[0]) * 60 + parseInt(timeSlots.find(s => s.type === 'lesson')!.endTime.split(':')[1])) -
-                                                        (parseInt(timeSlots.find(s => s.type === 'lesson')!.startTime.split(':')[0]) * 60 + parseInt(timeSlots.find(s => s.type === 'lesson')!.startTime.split(':')[1]))
-                                                        : 45} Menit
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </PrintLayout>
-                            );
-                        })()}
-                    </div>
-                )
-            }
-
-            {
-                printMode === 'combined' && (
-                    <div id="print-combined-view" className="hidden print:block bg-white z-[50]">
-                        <FullSchedulePrint
-                            schedules={schedules}
-                            timeSlots={timeSlots}
-                            signatureSettings={signatureSettings}
-                            infoLinks={infoLinks}
-                            showQr={false}
-                        />
-                    </div>
-                )
-            }
         </div >
     );
 }

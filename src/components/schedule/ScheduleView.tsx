@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
     Search,
@@ -74,50 +75,28 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
 
     const [printMode, setPrintMode] = useState<'single' | 'combined' | null>(null);
 
-    const handlePrint = (mode: 'single' | 'combined') => {
-        setPrintMode(mode);
-
-        const qrUrls = infoLinks.map(link =>
-            `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(link.url)}`
-        );
-
-        if (qrUrls.length === 0) {
-            setTimeout(() => {
-                window.print();
-                setTimeout(() => setPrintMode(null), 500);
-            }, 300);
-            return;
-        }
-
-        let loaded = 0;
-        let printed = false;
-        const total = qrUrls.length;
-        let fallbackTimeoutId: NodeJS.Timeout;
-
-        const triggerPrint = () => {
-            if (!printed) {
-                printed = true;
-                if (fallbackTimeoutId) clearTimeout(fallbackTimeoutId);
-                window.print();
-                setTimeout(() => setPrintMode(null), 500);
-            }
-        };
-
-        const onDone = () => {
-            loaded++;
-            if (loaded >= total) {
-                setTimeout(triggerPrint, 200);
-            }
-        };
-
-        qrUrls.forEach(url => {
+    // Preload QR codes in the background so they're cached before printing
+    useEffect(() => {
+        infoLinks.forEach(link => {
             const img = new Image();
-            img.onload = onDone;
-            img.onerror = onDone;
-            img.src = url;
+            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(link.url)}`;
         });
+    }, [infoLinks]);
 
-        fallbackTimeoutId = setTimeout(triggerPrint, 5000);
+    const handlePrint = (mode: 'single' | 'combined') => {
+        // Force React to commit the print view synchronously.
+        // On iOS Safari / mobile, React reconciliation is slower than desktop,
+        // so window.print() must fire AFTER the print view is in the DOM.
+        flushSync(() => setPrintMode(mode));
+
+        // Wait two animation frames to ensure layout/paint is complete,
+        // then print immediately (keeps window.print() close to the user gesture).
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                window.print();
+                setTimeout(() => setPrintMode(null), 500);
+            });
+        });
     };
 
     const [viewMode, setViewMode] = useState<ViewMode>('day');

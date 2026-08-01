@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
     Users,
@@ -122,11 +123,15 @@ export function TeacherStats() {
     };
 
     const handlePrint = () => {
-        setIsPrinting(true);
-        setTimeout(() => {
-            window.print();
-            setIsPrinting(false);
-        }, 500);
+        // Force React to commit the print view synchronously,
+        // then print after layout completes (fixes iOS Safari / mobile).
+        flushSync(() => setIsPrinting(true));
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                window.print();
+                setIsPrinting(false);
+            });
+        });
     };
 
     if (loading || !signatureSettings) {

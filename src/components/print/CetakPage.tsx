@@ -131,8 +131,11 @@ function PiketCetak() {
     return <PiketPrint data={data} />;
 }
 
-export function CetakPage() {
-    const { type, entity } = useParams();
+export function CetakPage({ forcedType }: { forcedType?: string } = {}) {
+    const { type: routeType, entity } = useParams();
+    // The static /cetak/statistik route has no URL params, so the admin guard passes
+    // the type explicitly via forcedType; otherwise read it from the route.
+    const type = forcedType || routeType;
     const { infoLinks } = useInfoLinks();
 
     // Preload QR codes in the background so they're cached before printing

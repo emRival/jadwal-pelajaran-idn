@@ -74,7 +74,7 @@ function AdminCetakRoute() {
 
   if (!isAdmin) return <Navigate to="/" replace />;
 
-  return <CetakPage />;
+  return <CetakPage forcedType="statistik" />;
 }
 
 function AppContent() {

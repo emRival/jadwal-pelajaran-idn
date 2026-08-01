@@ -181,9 +181,15 @@ export function CetakPage() {
 
     const handleBack = () => {
         window.close();
-        // Fallback if the page was not opened via window.open (close() is ignored)
+        // Fallback if the page was not opened via window.open (close() is ignored).
+        // For same-tab navigation (e.g. statistik print opened from /teachers), go back
+        // to the previous page; otherwise return to the home page.
         setTimeout(() => {
-            window.location.href = '/';
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '/';
+            }
         }, 100);
     };
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
     Users,
@@ -32,6 +33,7 @@ export function TeacherStats() {
     const [sortBy, setSortBy] = useState<'name' | 'jp'>('name');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [expandedTeacher, setExpandedTeacher] = useState<string | null>(null);
+    const navigate = useNavigate();
 
     const { teacherStats, filteredStats, guruCount, loading, method } = useTeacherStats(searchQuery, sortBy, sortOrder);
 
@@ -45,7 +47,12 @@ export function TeacherStats() {
     };
 
     const handlePrint = () => {
-        window.open('/cetak/statistik', '_blank');
+        // Navigate in the SAME tab (not window.open). A freshly opened tab re-initializes
+        // Firebase auth + re-checks the admin doc, which is unreliable (known Firebase
+        // new-tab bug on iPad/Safari, and fresh-tab getDoc can transiently miss) and caused
+        // the cetak statistik page to redirect home. In the same tab the admin status is
+        // already verified in memory, so the print page renders deterministically.
+        navigate('/cetak/statistik');
     };
 
     if (loading) {

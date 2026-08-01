@@ -28,8 +28,52 @@ import './index.css';
 // Admin guard for the dedicated stats print page (must be defined at module scope
 // so it is not recreated during render).
 function AdminCetakRoute() {
-  const { isAdmin } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
+  // Fresh tabs restore the Firebase session asynchronously and onAuthStateChanged
+  // can emit null briefly before the persisted user is restored (known Firebase
+  // new-tab bug, esp. Safari/iPad). Wait a short grace period before concluding
+  // the user is signed out, instead of redirecting home mid-restore.
+  const [graceDone, setGraceDone] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setGraceDone(true), 2500);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (loading || (!user && !graceDone)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-100">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-slate-100 text-center px-4">
+        <AlertTriangle className="h-10 w-10 text-amber-500" />
+        <h2 className="font-bold text-lg text-foreground">Sesi Login Tidak Ditemukan</h2>
+        <p className="text-sm text-muted-foreground max-w-md">
+          Tab cetak belum bisa memverifikasi sesi admin. Muat ulang tab ini, atau kembali dan klik
+          "Cetak Statistik" dari halaman Statistik Guru.
+        </p>
+        <div className="flex items-center gap-3 mt-1">
+          <button
+            onClick={() => window.location.reload()}
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            Muat Ulang
+          </button>
+          <a href="/" className="text-sm font-medium text-primary hover:underline">
+            Kembali ke halaman utama
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAdmin) return <Navigate to="/" replace />;
+
   return <CetakPage />;
 }
 

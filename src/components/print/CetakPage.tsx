@@ -188,7 +188,7 @@ export function CetakPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-100">
+        <div className="min-h-screen bg-slate-100 print:bg-white print:min-h-0">
             <style>
                 {`
                     @media print {
@@ -196,7 +196,7 @@ export function CetakPage() {
                             size: ${isLandscape ? 'landscape' : 'portrait'};
                             margin: 10mm;
                         }
-                        body {
+                        html, body {
                             background: white !important;
                             -webkit-print-color-adjust: exact;
                             color-adjust: exact;
@@ -226,9 +226,9 @@ export function CetakPage() {
             </div>
 
             {/* Document Preview - A4 sized on screen, full page in print */}
-            <div className="py-6 px-3 sm:px-6">
+            <div className="py-6 px-3 sm:px-6 print:py-0 print:px-0">
                 <div
-                    className={`mx-auto bg-white shadow-lg border border-slate-200 rounded-lg p-3 md:p-5 print:!w-auto print:!max-w-none print:!p-0 print:!border-0 print:!shadow-none print:!rounded-none ${isLandscape ? 'w-[1123px]' : 'w-[794px]'} max-w-full`}
+                    className={`mx-auto bg-white shadow-lg border border-slate-200 rounded-lg p-3 md:p-5 print:!w-auto print:!max-w-none print:!p-0 print:!border-0 print:!shadow-none print:!rounded-none ${isLandscape ? 'w-[1123px]' : 'w-[794px]'} max-w-full print:bg-white`}
                 >
                     {renderDocument()}
                 </div>

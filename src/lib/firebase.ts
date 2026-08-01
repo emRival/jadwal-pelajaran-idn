@@ -1,6 +1,11 @@
 // Firebase configuration
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import {
+    initializeAuth,
+    browserLocalPersistence,
+    browserPopupRedirectResolver,
+    GoogleAuthProvider
+} from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -14,7 +19,15 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+
+// Explicit local persistence + popup resolver. Relying on getAuth() auto-detection
+// can cause onAuthStateChanged to hydrate null in a freshly opened tab (window.open)
+// before the IndexedDB/localStorage session is restored — a known Firebase bug on
+// Safari/iPad — which made the admin-guarded /cetak/statistik redirect home.
+export const auth = initializeAuth(app, {
+    persistence: browserLocalPersistence,
+    popupRedirectResolver: browserPopupRedirectResolver,
+});
 
 // Initialize Firestore with offline persistence
 export const db = initializeFirestore(app, {

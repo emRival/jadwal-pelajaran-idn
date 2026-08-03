@@ -1,7 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { request as httpsRequest } from 'node:https';
-import type { Schedule, TimeSlot } from '../src/types';
-import { DEFAULT_TIME_SLOTS, DAYS_OF_WEEK_API } from '../src/types';
 
 // Public Firestore web API key (already exposed in the SPA bundle) + project config.
 // The schedule data is public, so no secret/service-account is needed here.
@@ -18,6 +16,20 @@ const RESPONSE_HEADERS: Record<string, string> = {
     'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300',
     'Content-Type': 'application/json',
 };
+
+const DAYS_OF_WEEK_API = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+
+const DEFAULT_TIME_SLOTS = [
+    { type: 'lesson', jp: 1, startTime: '07:30', endTime: '08:15', order: 1 },
+    { type: 'lesson', jp: 2, startTime: '08:15', endTime: '09:00', order: 2 },
+    { type: 'lesson', jp: 3, startTime: '09:00', endTime: '09:45', order: 3 },
+    { type: 'break', name: 'Istirahat', startTime: '09:45', endTime: '10:00', order: 4 },
+    { type: 'lesson', jp: 4, startTime: '10:00', endTime: '10:45', order: 5 },
+    { type: 'lesson', jp: 5, startTime: '10:45', endTime: '11:30', order: 6 },
+    { type: 'break', name: 'ISHOMA & Islamic Public Speaking', startTime: '11:30', endTime: '13:00', order: 7 },
+    { type: 'lesson', jp: 6, startTime: '13:00', endTime: '13:45', order: 8 },
+    { type: 'lesson', jp: 7, startTime: '13:45', endTime: '14:30', order: 9 },
+];
 
 function httpsGet(url: string): Promise<{ status: number; body: string }> {
     return new Promise((resolve, reject) => {
@@ -103,34 +115,30 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
             fetchCollection('timeSlots'),
         ]);
 
-        const schedules = scheduleDocs as Schedule[];
-        const timeSlots = timeSlotDocs as TimeSlot[];
-
         // Weekday slots: everything that is not explicitly marked as saturday.
-        let weekdaySlots = timeSlots
-            .filter((slot) => slot.dayType !== 'saturday')
-            .sort((a, b) => a.order - b.order);
+        let weekdaySlots = timeSlotDocs
+            .filter((slot: any) => slot.dayType !== 'saturday')
+            .sort((a: any, b: any) => Number(a.order) - Number(b.order));
         if (weekdaySlots.length === 0) {
             weekdaySlots = DEFAULT_TIME_SLOTS.map((slot, i) => ({
                 ...slot,
-                order: slot.order ?? i + 1,
                 id: `default-${i}`,
-            })) as TimeSlot[];
+            }));
         }
 
         // Saturday slots: only dayType === 'saturday'. Fall back to weekday slots.
-        let saturdaySlots = timeSlots
-            .filter((slot) => slot.dayType === 'saturday')
-            .sort((a, b) => a.order - b.order);
+        let saturdaySlots = timeSlotDocs
+            .filter((slot: any) => slot.dayType === 'saturday')
+            .sort((a: any, b: any) => Number(a.order) - Number(b.order));
         if (saturdaySlots.length === 0) {
             saturdaySlots = weekdaySlots;
         }
 
         const days = [1, 2, 3, 4, 5, 6].map((dayNum) => {
-            const items = schedules
-                .filter((s) => Number(s.day) === dayNum)
-                .sort((a, b) => Number(a.jp) - Number(b.jp))
-                .map((s) => ({
+            const items = scheduleDocs
+                .filter((s: any) => Number(s.day) === dayNum)
+                .sort((a: any, b: any) => Number(a.jp) - Number(b.jp))
+                .map((s: any) => ({
                     jp: Number(s.jp),
                     mapel: s.mapel || '',
                     guru: s.guru || '',

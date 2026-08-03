@@ -6,11 +6,21 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Open a URL in a new browser tab. In an iOS PWA running in standalone mode,
-// window.open() is silently ignored, while a real <a target="_blank"> link is
-// opened in Safari (where window.print() actually works). Using an anchor here
-// keeps the behavior identical in a normal browser (new tab) and fixes printing
-// from the home-screen bookmark on iPad.
+// window.open() is silently ignored and <a target="_blank"> links to the same
+// domain stay inside the app (iOS never forwards them to Safari). Navigating
+// same-tab is therefore the only reliable way to move to another page there;
+// a normal browser keeps the new-tab behavior.
 export function openInNewTab(url: string) {
+  const isStandalone =
+    typeof window !== 'undefined' &&
+    (window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as any).standalone === true);
+
+  if (isStandalone) {
+    window.location.href = url;
+    return;
+  }
+
   const a = document.createElement('a');
   a.href = url;
   a.target = '_blank';

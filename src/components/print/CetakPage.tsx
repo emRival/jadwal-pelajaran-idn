@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Printer, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { Printer, ArrowLeft, Loader2, AlertCircle, Copy, Check } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { openInNewTab } from '@/lib/utils';
 import { SingleSchedulePrint } from './SingleSchedulePrint';
 import { TeacherStatsPrint } from './TeacherStatsPrint';
 import { PiketPrint } from './PiketPrint';
@@ -197,19 +196,74 @@ export function CetakPage({ forcedType }: { forcedType?: string } = {}) {
         }, 100);
     };
 
-    // iOS home-screen web apps run in "standalone" mode, where window.print() is a
-    // silent no-op. In that mode we open the current page in Safari instead (via an
-    // <a target="_blank">, which iOS opens in Safari) and let the user print there.
+    // iOS home-screen web apps run in "standalone" mode, where window.print() is
+    // a silent no-op on many iPadOS versions and target="_blank" links to the same
+    // domain never reach Safari. We still attempt window.print() first (it works on
+    // some versions); if the print dialog is not detected within a short timeout we
+    // show a fallback panel with the manual Safari steps.
     const isStandalone =
         typeof window !== 'undefined' &&
         (window.matchMedia('(display-mode: standalone)').matches ||
             (navigator as any).standalone === true);
 
+    const [showPrintFallback, setShowPrintFallback] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const printTimeoutRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (printTimeoutRef.current !== null) {
+                window.clearTimeout(printTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const clearPrintTimer = () => {
+        if (printTimeoutRef.current !== null) {
+            window.clearTimeout(printTimeoutRef.current);
+            printTimeoutRef.current = null;
+        }
+    };
+
     const handlePrint = () => {
-        if (isStandalone) {
-            openInNewTab(window.location.href);
-        } else {
+        if (!isStandalone) {
             window.print();
+            return;
+        }
+
+        // Try window.print() and watch for the print dialog via the print media
+        // query and onbeforeprint. If neither fires, the call was a no-op.
+        setShowPrintFallback(false);
+        clearPrintTimer();
+
+        const onPrintDetected = () => {
+            clearPrintTimer();
+            window.removeEventListener('beforeprint', onPrintDetected);
+        };
+        window.addEventListener('beforeprint', onPrintDetected);
+        const mql = window.matchMedia('print');
+        const onMqlChange = (e: MediaQueryListEvent) => {
+            if (e.matches) onPrintDetected();
+        };
+        mql.addEventListener('change', onMqlChange);
+
+        window.print();
+
+        printTimeoutRef.current = window.setTimeout(() => {
+            clearPrintTimer();
+            window.removeEventListener('beforeprint', onPrintDetected);
+            mql.removeEventListener('change', onMqlChange);
+            setShowPrintFallback(true);
+        }, 2000);
+    };
+
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+        } catch {
+            // Clipboard API may be unavailable in some embedded contexts.
         }
     };
 
@@ -245,15 +299,37 @@ export function CetakPage({ forcedType }: { forcedType?: string } = {}) {
                         </Button>
                         <Button size="sm" onClick={handlePrint}>
                             <Printer className="h-4 w-4 mr-1.5" />
-                            {isStandalone ? 'Buka di Safari & Cetak' : 'Cetak'}
+                            Cetak
                         </Button>
                     </div>
                 </div>
-                {isStandalone && (
-                    <div className="bg-amber-50 border-t border-amber-200 px-4 py-1.5 text-center">
-                        <p className="text-xs text-amber-800">
-                            Mode aplikasi tidak mendukung cetak langsung. Tombol di atas akan membuka halaman ini di Safari untuk dicetak.
-                        </p>
+                {showPrintFallback && (
+                    <div className="bg-amber-50 border-t border-amber-200 px-4 py-3">
+                        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center gap-3">
+                            <div className="flex items-start gap-2.5 min-w-0">
+                                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                <div className="text-sm text-amber-900 min-w-0">
+                                    <p className="font-semibold">Mode aplikasi tidak bisa mencetak langsung di perangkat ini.</p>
+                                    <p className="text-xs mt-1">
+                                        Salin tautan di bawah, buka di Safari, lalu pilih <span className="font-medium">Share → Cetak</span>.
+                                    </p>
+                                    <code className="block mt-1.5 text-[11px] text-amber-800 bg-amber-100/70 rounded px-2 py-1 break-all">{window.location.href}</code>
+                                </div>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={handleCopyLink} className="flex-shrink-0">
+                                {copied ? (
+                                    <>
+                                        <Check className="h-4 w-4 mr-1.5" />
+                                        Tersalin
+                                    </>
+                                ) : (
+                                    <>
+                                        <Copy className="h-4 w-4 mr-1.5" />
+                                        Salin Tautan
+                                    </>
+                                )}
+                            </Button>
+                        </div>
                     </div>
                 )}
             </div>

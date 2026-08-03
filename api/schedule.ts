@@ -17,7 +17,7 @@ const RESPONSE_HEADERS: Record<string, string> = {
     'Content-Type': 'application/json',
 };
 
-const DAYS_OF_WEEK_API = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+const DAYS_OF_WEEK_API = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
 const DEFAULT_TIME_SLOTS = [
     { type: 'lesson', jp: 1, startTime: '07:30', endTime: '08:15', order: 1 },
@@ -98,6 +98,16 @@ function buildTimeSlotList(slots: any[]): any[] {
         }));
 }
 
+// Map jp (lesson number) -> time range, from the lesson time slots of a day type.
+function buildTimeMap(slots: any[]): Map<number, { startTime: string; endTime: string }> {
+    const map = new Map<number, { startTime: string; endTime: string }>();
+    slots.forEach((slot: any) => {
+        if (slot.type === 'break' || slot.jp == null) return;
+        map.set(Number(slot.jp), { startTime: slot.startTime || '', endTime: slot.endTime || '' });
+    });
+    return map;
+}
+
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
     if (req.method === 'OPTIONS') {
         res.writeHead(204, RESPONSE_HEADERS);
@@ -135,19 +145,28 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         }
 
         const days = [1, 2, 3, 4, 5, 6].map((dayNum) => {
+            const isSaturday = dayNum === 6;
+            const timeMap = buildTimeMap(isSaturday ? saturdaySlots : weekdaySlots);
             const items = scheduleDocs
                 .filter((s: any) => Number(s.day) === dayNum)
                 .sort((a: any, b: any) => Number(a.jp) - Number(b.jp))
-                .map((s: any) => ({
-                    jp: Number(s.jp),
-                    mapel: s.mapel || '',
-                    guru: s.guru || '',
-                    classes: Array.isArray(s.classes) ? s.classes : [],
-                }));
+                .map((s: any) => {
+                    const jp = Number(s.jp);
+                    return {
+                        jp,
+                        time: timeMap.get(jp) || null,
+                        mapel: s.mapel || '',
+                        guru: s.guru || '',
+                        class:
+                            Array.isArray(s.classes) && s.classes.length > 0
+                                ? s.classes[0]
+                                : '',
+                    };
+                });
             return {
                 day: dayNum,
                 name: DAYS_OF_WEEK_API[dayNum] || '',
-                dayType: dayNum === 6 ? 'saturday' : 'weekday',
+                dayType: isSaturday ? 'saturday' : 'weekday',
                 items,
             };
         });

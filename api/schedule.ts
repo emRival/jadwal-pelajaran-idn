@@ -1,3 +1,5 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { request as httpsRequest } from 'node:https';
 import type { Schedule, TimeSlot } from '../src/types';
 import { DEFAULT_TIME_SLOTS, DAYS_OF_WEEK_API } from '../src/types';
 
@@ -17,8 +19,23 @@ const RESPONSE_HEADERS: Record<string, string> = {
     'Content-Type': 'application/json',
 };
 
-function jsonResponse(body: unknown, status: number): Response {
-    return new Response(JSON.stringify(body), { status, headers: RESPONSE_HEADERS });
+function httpsGet(url: string): Promise<{ status: number; body: string }> {
+    return new Promise((resolve, reject) => {
+        const req = httpsRequest(url, (res) => {
+            let data = '';
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+            res.on('end', () => resolve({ status: res.statusCode || 0, body: data }));
+        });
+        req.on('error', reject);
+        req.end();
+    });
+}
+
+function send(res: ServerResponse, status: number, body: unknown): void {
+    res.writeHead(status, RESPONSE_HEADERS);
+    res.end(JSON.stringify(body));
 }
 
 function parseValue(value: any): any {
@@ -44,11 +61,11 @@ function parseFields(fields: Record<string, any>): Record<string, any> {
 
 async function fetchCollection(collectionName: string): Promise<any[]> {
     const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${DATA_PREFIX}/${collectionName}?key=${FIREBASE_API_KEY}&pageSize=1000`;
-    const res = await fetch(url);
-    if (!res.ok) {
-        throw new Error(`Firestore read failed for "${collectionName}" (HTTP ${res.status})`);
+    const { status, body } = await httpsGet(url);
+    if (status !== 200) {
+        throw new Error(`Firestore read failed for "${collectionName}" (HTTP ${status})`);
     }
-    const json = await res.json();
+    const json = JSON.parse(body);
     return (json.documents || []).map((doc: any) => {
         const segments = String(doc.name).split('/');
         return { id: segments[segments.length - 1], ...parseFields(doc.fields || {}) };
@@ -69,12 +86,15 @@ function buildTimeSlotList(slots: any[]): any[] {
         }));
 }
 
-export default async function handler(req: Request): Promise<Response> {
+export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
     if (req.method === 'OPTIONS') {
-        return new Response(null, { status: 204, headers: RESPONSE_HEADERS });
+        res.writeHead(204, RESPONSE_HEADERS);
+        res.end();
+        return;
     }
     if (req.method !== 'GET') {
-        return jsonResponse({ status: 'error', message: 'Method not allowed. Use GET.' }, 405);
+        send(res, 405, { status: 'error', message: 'Method not allowed. Use GET.' });
+        return;
     }
 
     try {
@@ -124,25 +144,19 @@ export default async function handler(req: Request): Promise<Response> {
             };
         });
 
-        return jsonResponse(
-            {
-                status: 'success',
-                generatedAt: new Date().toISOString(),
-                data: {
-                    timeSlots: {
-                        weekday: buildTimeSlotList(weekdaySlots),
-                        saturday: buildTimeSlotList(saturdaySlots),
-                    },
-                    days,
+        send(res, 200, {
+            status: 'success',
+            generatedAt: new Date().toISOString(),
+            data: {
+                timeSlots: {
+                    weekday: buildTimeSlotList(weekdaySlots),
+                    saturday: buildTimeSlotList(saturdaySlots),
                 },
+                days,
             },
-            200
-        );
+        });
     } catch (err) {
         console.error('api/schedule error:', err);
-        return jsonResponse(
-            { status: 'error', message: 'Gagal membaca data jadwal. Coba lagi nanti.' },
-            500
-        );
+        send(res, 500, { status: 'error', message: 'Gagal membaca data jadwal. Coba lagi nanti.' });
     }
 }

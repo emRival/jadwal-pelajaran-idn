@@ -31,7 +31,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
+import { cn, openInNewTab } from '@/lib/utils';
 import { useSchedules, useTeachers, useClasses, useTimeSlots, useSignatureSettings, useInfoLinks } from '@/hooks/useFirebase';
 import { useNavigate } from 'react-router-dom';
 import { LoginDialog } from '@/components/layout/LoginDialog';
@@ -318,12 +318,12 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         {selectedEntity && (
-                                            <DropdownMenuItem onClick={() => window.open(`/cetak/${viewMode === 'class' ? 'kelas' : 'guru'}/${encodeURIComponent(selectedEntity)}`, '_blank')}>
+                                            <DropdownMenuItem onClick={() => openInNewTab(`/cetak/${viewMode === 'class' ? 'kelas' : 'guru'}/${encodeURIComponent(selectedEntity)}`)}>
                                                 Cetak {viewMode === 'class' ? 'Per Kelas' : 'Per Guru'} ({selectedEntity})
                                             </DropdownMenuItem>
                                         )}
                                         {viewMode !== 'teacher' && (
-                                            <DropdownMenuItem onClick={() => window.open('/cetak/gabungan', '_blank')}>
+                                            <DropdownMenuItem onClick={() => openInNewTab('/cetak/gabungan')}>
                                                 Cetak Semua (Gabungan)
                                             </DropdownMenuItem>
                                         )}
@@ -333,7 +333,7 @@ export function ScheduleView({ loginOpenDefault = false }: ScheduleViewProps) {
                                 <Button
                                     variant="outline"
                                     className="flex-1 md:flex-none flex items-center justify-center gap-2 h-10 no-print hover:bg-muted/50 transition-colors"
-                                    onClick={() => window.open('/cetak/piket', '_blank')}
+                                    onClick={() => openInNewTab('/cetak/piket')}
                                 >
                                     <Printer className="h-4 w-4" />
                                     <span>Cetak Jadwal Piket</span>

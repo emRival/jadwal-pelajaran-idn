@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Printer, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { openInNewTab } from '@/lib/utils';
 import { SingleSchedulePrint } from './SingleSchedulePrint';
 import { TeacherStatsPrint } from './TeacherStatsPrint';
 import { PiketPrint } from './PiketPrint';
@@ -196,6 +197,22 @@ export function CetakPage({ forcedType }: { forcedType?: string } = {}) {
         }, 100);
     };
 
+    // iOS home-screen web apps run in "standalone" mode, where window.print() is a
+    // silent no-op. In that mode we open the current page in Safari instead (via an
+    // <a target="_blank">, which iOS opens in Safari) and let the user print there.
+    const isStandalone =
+        typeof window !== 'undefined' &&
+        (window.matchMedia('(display-mode: standalone)').matches ||
+            (navigator as any).standalone === true);
+
+    const handlePrint = () => {
+        if (isStandalone) {
+            openInNewTab(window.location.href);
+        } else {
+            window.print();
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-100 print:bg-white print:min-h-0">
             <style>
@@ -226,12 +243,19 @@ export function CetakPage({ forcedType }: { forcedType?: string } = {}) {
                             <ArrowLeft className="h-4 w-4 mr-1.5" />
                             Kembali
                         </Button>
-                        <Button size="sm" onClick={() => window.print()}>
+                        <Button size="sm" onClick={handlePrint}>
                             <Printer className="h-4 w-4 mr-1.5" />
-                            Cetak
+                            {isStandalone ? 'Buka di Safari & Cetak' : 'Cetak'}
                         </Button>
                     </div>
                 </div>
+                {isStandalone && (
+                    <div className="bg-amber-50 border-t border-amber-200 px-4 py-1.5 text-center">
+                        <p className="text-xs text-amber-800">
+                            Mode aplikasi tidak mendukung cetak langsung. Tombol di atas akan membuka halaman ini di Safari untuk dicetak.
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Document Preview - A4 sized on screen, full page in print */}

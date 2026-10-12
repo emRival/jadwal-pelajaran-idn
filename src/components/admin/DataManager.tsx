@@ -14,7 +14,8 @@ import {
     Search,
     Check,
     ChevronsUpDown,
-    Download
+    Download,
+    ArrowRightLeft
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -50,8 +51,9 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
-import { useTeachers, useClasses, useSubjects, useTasks } from '@/hooks/useFirebase';
+import { useTeachers, useClasses, useSubjects, useTasks, useSchedules } from '@/hooks/useFirebase';
 import { Checkbox } from '@/components/ui/checkbox';
+import type { Subject } from '@/types';
 
 type EntityType = 'teachers' | 'classes' | 'subjects' | 'tasks';
 
@@ -60,6 +62,7 @@ export function DataManager() {
     const { classes, loading: classesLoading, addClass, updateClass, deleteClass } = useClasses();
     const { subjects, loading: subjectsLoading, addSubject, updateSubject, deleteSubject } = useSubjects();
     const { tasks, loading: tasksLoading, addTask, updateTask, deleteTask } = useTasks();
+    const { schedules, updateSchedule } = useSchedules();
 
     const [activeTab, setActiveTab] = useState<EntityType>('teachers');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -73,6 +76,12 @@ export function DataManager() {
     const [guruDialogSearch, setGuruDialogSearch] = useState('');
     const [listSearch, setListSearch] = useState('');
     const [taskSearch, setTaskSearch] = useState('');
+    const [transferSubject, setTransferSubject] = useState<Subject | null>(null);
+    const [transferGuru, setTransferGuru] = useState('');
+    const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+    const [transferGuruSearch, setTransferGuruSearch] = useState('');
+    const [transferGuruPopoverOpen, setTransferGuruPopoverOpen] = useState(false);
+    const [isTransferring, setIsTransferring] = useState(false);
 
     const loading = teachersLoading || classesLoading || subjectsLoading || tasksLoading;
 
@@ -80,6 +89,16 @@ export function DataManager() {
         if (!guruDialogSearch) return teachers;
         return teachers.filter(t => t.name.toLowerCase().includes(guruDialogSearch.toLowerCase()));
     }, [teachers, guruDialogSearch]);
+
+    const filteredTransferGuru = useMemo(() => {
+        if (!transferGuruSearch) return teachers;
+        return teachers.filter(t => t.name.toLowerCase().includes(transferGuruSearch.toLowerCase()));
+    }, [teachers, transferGuruSearch]);
+
+    const transferAffectedCount = useMemo(() => {
+        if (!transferSubject || !transferGuru) return 0;
+        return schedules.filter(s => s.mapel === transferSubject.name && s.guru !== transferGuru).length;
+    }, [schedules, transferSubject, transferGuru]);
 
     const getTabConfig = () => {
         switch (activeTab) {
@@ -223,6 +242,37 @@ export function DataManager() {
 
     const handleDelete = async (id: string) => {
         await config.deleteFn(id);
+    };
+
+    const openTransferDialog = (subject: Subject) => {
+        setTransferSubject(subject);
+        setTransferGuru(subject.guru || '');
+        setTransferGuruSearch('');
+        setTransferGuruPopoverOpen(false);
+        setTransferDialogOpen(true);
+    };
+
+    const closeTransferDialog = () => {
+        setTransferDialogOpen(false);
+        setTransferSubject(null);
+        setTransferGuru('');
+        setTransferGuruSearch('');
+        setTransferGuruPopoverOpen(false);
+    };
+
+    const handleTransfer = async () => {
+        if (!transferSubject || !transferGuru) return;
+        setIsTransferring(true);
+        try {
+            await updateSubject(transferSubject.id, { guru: transferGuru });
+            const affected = schedules.filter(
+                s => s.mapel === transferSubject.name && s.guru !== transferGuru
+            );
+            await Promise.all(affected.map(s => updateSchedule(s.id, { guru: transferGuru })));
+            closeTransferDialog();
+        } finally {
+            setIsTransferring(false);
+        }
     };
 
     const handleExportExcel = () => {
@@ -530,6 +580,16 @@ export function DataManager() {
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-1">
+                                                    {activeTab === 'subjects' && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            title="Transfer mapel ke guru lain"
+                                                            onClick={() => openTransferDialog(item as Subject)}
+                                                        >
+                                                            <ArrowRightLeft className="h-4 w-4 text-emerald-600" />
+                                                        </Button>
+                                                    )}
                                                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
                                                         <Edit className="h-4 w-4 text-blue-500" />
                                                     </Button>
@@ -571,6 +631,100 @@ export function DataManager() {
                         </div>
                     </TabsContent>
                 </Tabs>
+
+                <Dialog open={transferDialogOpen} onOpenChange={(open) => !open && closeTransferDialog()}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Transfer Mapel</DialogTitle>
+                            <DialogDescription>
+                                Ganti guru pengampu mapel ini. Semua jadwal dengan mapel ini akan ikut diperbarui.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-1">
+                                <Label className="text-muted-foreground">Mata Pelajaran</Label>
+                                <p className="font-medium">{transferSubject?.name}</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Guru Baru</Label>
+                                <Popover open={transferGuruPopoverOpen} onOpenChange={setTransferGuruPopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            className="w-full justify-between font-normal"
+                                        >
+                                            {transferGuru ? transferGuru : "Pilih guru..."}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[400px] p-0" align="start">
+                                        <div className="flex items-center border-b px-3">
+                                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                            <input
+                                                className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                                placeholder="Cari guru..."
+                                                value={transferGuruSearch}
+                                                onChange={(e) => setTransferGuruSearch(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="max-h-[200px] overflow-y-auto p-1">
+                                            {filteredTransferGuru.length === 0 ? (
+                                                <div className="py-6 text-center text-sm text-muted-foreground">
+                                                    Tidak ditemukan.
+                                                </div>
+                                            ) : (
+                                                filteredTransferGuru.map((teacher) => (
+                                                    <div
+                                                        key={teacher.id}
+                                                        className={cn(
+                                                            "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+                                                            transferGuru === teacher.name ? "bg-accent text-accent-foreground" : ""
+                                                        )}
+                                                        onClick={() => {
+                                                            setTransferGuru(teacher.name);
+                                                            setTransferGuruPopoverOpen(false);
+                                                            setTransferGuruSearch('');
+                                                        }}
+                                                    >
+                                                        <Check
+                                                            className={cn(
+                                                                "mr-2 h-4 w-4",
+                                                                transferGuru === teacher.name ? "opacity-100" : "opacity-0"
+                                                            )}
+                                                        />
+                                                        {teacher.name}
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                                <p className="text-xs text-muted-foreground">
+                                    {transferGuru
+                                        ? `${transferAffectedCount} jadwal akan diperbarui ke ${transferGuru}.`
+                                        : 'Pilih guru baru untuk memindahkan mapel ini.'}
+                                </p>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={closeTransferDialog} disabled={isTransferring}>
+                                Batal
+                            </Button>
+                            <Button
+                                onClick={handleTransfer}
+                                disabled={!transferGuru || isTransferring || transferGuru === transferSubject?.guru}
+                            >
+                                {isTransferring ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                    <ArrowRightLeft className="h-4 w-4 mr-2" />
+                                )}
+                                Transfer
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </CardContent>
         </Card>
     );
